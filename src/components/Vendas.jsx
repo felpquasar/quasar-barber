@@ -1,0 +1,275 @@
+import { useState, useMemo } from 'react';
+import { supabase } from '../lib/supabase';
+import { fmt, today, addDays } from '../lib/utils';
+import { inp, btn } from '../styles/shared';
+import Icon from './ui/Icon';
+import Modal from './ui/Modal';
+import Field from './ui/Field';
+import Spinner from './ui/Spinner';
+
+const FORMAS = ["a_vista", "cartao", "pix", "fiado"];
+const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", fiado: "Fiado" };
+const FORMA_COR = { a_vista: "#4caf82", cartao: "#6b9fd4", pix: "#5cb8d4", fiado: "#e8a020" };
+const PRAZOS = [{ label: "À Vista", dias: 0 }, { label: "30d", dias: 30 }, { label: "60d", dias: 60 }, { label: "90d", dias: 90 }];
+
+const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimentos, setContasReceber, notify }) => {
+  const [modal, setModal] = useState(false);
+  const [detalhe, setDetalhe] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30 });
+  const [itens, setItens] = useState([{ produtoId: "", quantidade: 1, preco: "" }]);
+
+  const addItem = () => setItens(p => [...p, { produtoId: "", quantidade: 1, preco: "" }]);
+  const remItem = (i) => setItens(p => p.filter((_, idx) => idx !== i));
+  const updItem = (i, field, val) =>
+    setItens(p => p.map((it, idx) => {
+      if (idx !== i) return it;
+      const u = { ...it, [field]: val };
+      if (field === "produtoId") { const prod = produtos.find(x => x.id === Number(val)); if (prod) u.preco = prod.preco; }
+      return u;
+    }));
+
+  const subtotal = itens.reduce((a, it) => a + (Number(it.quantidade) || 0) * (Number(it.preco) || 0), 0);
+  const descPct = Math.min(Math.max(Number(form.desconto) || 0, 0), 100);
+  const valorDesconto = subtotal * (descPct / 100);
+  const total = subtotal - valorDesconto;
+  const statusCor = { pago: "#4caf82", pendente: "#e8a020", cancelado: "#e05a5a" };
+
+  const abrirModal = () => { setForm({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30 }); setItens([{ produtoId: "", quantidade: 1, preco: "" }]); setModal(true); };
+
+  const salvarVenda = async () => {
+    if (!form.clienteId || itens.some(it => !it.produtoId || !it.quantidade || !it.preco)) { notify("Preencha todos os campos da venda.", "error"); return; }
+    setSaving(true);
+    try {
+      const { data: venda, error: ve } = await supabase.from("vendas").insert({
+        cliente_id: Number(form.clienteId), data: form.data, status: form.status, total,
+        desconto_pct: descPct > 0 ? descPct : null, desconto_valor: descPct > 0 ? valorDesconto : null,
+        forma_pagamento: form.forma, prazo_dias: Number(form.prazo),
+      }).select().single();
+      if (ve) throw ve;
+      const itensSalvar = itens.map(it => ({ venda_id: venda.id, produto_id: Number(it.produtoId), quantidade: Number(it.quantidade), preco: Number(it.preco) }));
+      const { error: ie } = await supabase.from("venda_itens").insert(itensSalvar);
+      if (ie) throw ie;
+      for (const it of itens) {
+        const prod = produtos.find(p => p.id === Number(it.produtoId)); if (!prod) continue;
+        const novoEstoque = prod.estoque - Number(it.quantidade);
+        await supabase.from("produtos").update({ estoque: novoEstoque }).eq("id", prod.id);
+        setProdutos(prev => prev.map(p => p.id === prod.id ? { ...p, estoque: novoEstoque } : p));
+        await supabase.from("movimentos").insert({ produto_id: prod.id, tipo: "saida", quantidade: Number(it.quantidade), data: form.data, obs: `Venda #${String(venda.id).slice(-4)}` });
+      }
+      if (form.status === "pendente") {
+        const vencimento = addDays(form.data, Number(form.prazo));
+        const cli = clientes.find(c => c.id === Number(form.clienteId));
+        const { data: cr } = await supabase.from("contas_receber").insert({
+          venda_id: venda.id, cliente_id: Number(form.clienteId),
+          descricao: `Venda #${String(venda.id).slice(-4)}${cli ? ` — ${cli.nome}` : ""}`,
+          valor: total, forma_pagamento: form.forma,
+          data_emissao: form.data, data_vencimento: vencimento, status: "pendente",
+        }).select().single();
+        if (cr) setContasReceber(prev => [...prev, cr].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)));
+      }
+      setVendas(prev => [{ ...venda, venda_itens: itensSalvar }, ...prev]);
+      setModal(false); notify("Venda registrada!");
+    } catch (err) { console.error(err); notify("Erro ao salvar venda.", "error"); }
+    finally { setSaving(false); }
+  };
+
+  const marcarPago = async (v) => {
+    const { data, error } = await supabase.from("vendas").update({ status: "pago" }).eq("id", v.id).select().single();
+    if (error) { notify("Erro ao atualizar.", "error"); return; }
+    setVendas(prev => prev.map(x => x.id === v.id ? { ...x, status: "pago" } : x));
+    const { data: cr } = await supabase.from("contas_receber")
+      .update({ status: "pago", data_pagamento: today() })
+      .eq("venda_id", v.id).eq("status", "pendente").select();
+    if (cr?.length) setContasReceber(prev => prev.map(x => x.venda_id === v.id ? { ...x, status: "pago", data_pagamento: today() } : x));
+    notify("Venda marcada como paga!");
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#e8c97a", margin: 0 }}>Vendas</h2>
+        <button style={btn("primary")} onClick={abrirModal}><Icon name="plus" size={14} /> Nova Venda</button>
+      </div>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
+          <thead><tr style={{ background: "#111" }}>
+            {["#", "Data", "Cliente", "Itens", "Desconto", "Total", "Status", "Ações"].map(h => (
+              <th key={h} style={{ padding: ".75rem 1rem", textAlign: "left", fontSize: ".72rem", color: "#555", textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 600 }}>{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {vendas.map(v => { const cli = clientes.find(c => c.id === v.cliente_id); return (
+              <tr key={v.id} style={{ borderTop: "1px solid #1f1f1f" }}>
+                <td style={{ padding: ".8rem 1rem", color: "#555", fontSize: ".8rem" }}>#{String(v.id).slice(-4)}</td>
+                <td style={{ padding: ".8rem 1rem", color: "#aaa" }}>{v.data}</td>
+                <td style={{ padding: ".8rem 1rem", color: "#e0e0e0", fontWeight: 500 }}>{cli?.nome ?? "—"}</td>
+                <td style={{ padding: ".8rem 1rem", color: "#999" }}>{(v.venda_itens || []).length} item(s)</td>
+                <td style={{ padding: ".8rem 1rem" }}>
+                  {v.desconto_pct ? <span style={{ fontSize: ".78rem", padding: "2px 8px", borderRadius: 20, background: "#1f1a09", color: "#e8a020", fontFamily: "'DM Mono',monospace" }}>-{v.desconto_pct}%</span>
+                    : <span style={{ color: "#333", fontSize: ".78rem" }}>—</span>}
+                </td>
+                <td style={{ padding: ".8rem 1rem", color: "#c9a84c", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{fmt(v.total)}</td>
+                <td style={{ padding: ".8rem 1rem" }}>
+                  <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 20, background: (statusCor[v.status] || "#555") + "22", color: statusCor[v.status] || "#888" }}>{v.status}</span>
+                </td>
+                <td style={{ padding: ".8rem 1rem" }}>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {v.status === "pendente" && (
+                      <button onClick={() => marcarPago(v)} style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#4caf8222", color: "#4caf82", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }}>
+                        <Icon name="check" size={13} /> Pago
+                      </button>
+                    )}
+                    <button style={{ ...btn("ghost"), padding: "4px 10px", fontSize: ".75rem" }} onClick={() => setDetalhe(v)}>Ver</button>
+                  </div>
+                </td>
+              </tr>
+            ); })}
+            {vendas.length === 0 && <tr><td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#444" }}>Nenhuma venda registrada</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {modal && (
+        <Modal title="Registrar Venda" onClose={() => setModal(false)} wide>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <Field label="Cliente">
+              <select style={inp} value={form.clienteId} onChange={e => setForm({ ...form, clienteId: e.target.value })}>
+                <option value="">Selecionar cliente...</option>
+                {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </Field>
+            <Field label="Data"><input style={inp} type="date" value={form.data} onChange={e => setForm({ ...form, data: e.target.value })} /></Field>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <Field label="Status">
+              <div style={{ display: "flex", gap: 8 }}>
+                {["pendente", "pago"].map(s => (
+                  <button key={s} onClick={() => setForm({ ...form, status: s })}
+                    style={{ flex: 1, padding: "7px 0", borderRadius: 6, border: "none", cursor: "pointer", background: form.status === s ? (s === "pago" ? "#4caf8233" : "#e8a02033") : "#1a1a1a", color: form.status === s ? (s === "pago" ? "#4caf82" : "#e8a020") : "#666", fontSize: ".82rem", fontWeight: form.status === s ? 600 : 400, textTransform: "capitalize" }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Forma de Pagamento">
+              <select style={inp} value={form.forma} onChange={e => setForm({ ...form, forma: e.target.value })}>
+                {FORMAS.map(f => <option key={f} value={f}>{FORMA_LABEL[f]}</option>)}
+              </select>
+            </Field>
+          </div>
+          {form.status === "pendente" && (
+            <Field label="Prazo de Pagamento">
+              <div style={{ display: "flex", gap: 8 }}>
+                {PRAZOS.map(p => (
+                  <button key={p.dias} onClick={() => setForm({ ...form, prazo: p.dias })}
+                    style={{ flex: 1, padding: "7px 0", borderRadius: 6, border: `1px solid ${form.prazo === p.dias ? "#c9a84c" : "#333"}`, cursor: "pointer",
+                      background: form.prazo === p.dias ? "#c9a84c22" : "transparent",
+                      color: form.prazo === p.dias ? "#c9a84c" : "#666",
+                      fontSize: ".78rem", fontWeight: form.prazo === p.dias ? 700 : 400 }}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginTop: 6, fontSize: ".75rem", color: "#555" }}>
+                Vencimento: <span style={{ color: "#c9a84c", fontFamily: "'DM Mono',monospace" }}>{addDays(form.data, Number(form.prazo))}</span>
+              </div>
+            </Field>
+          )}
+          <div style={{ borderTop: "1px solid #2a2a2a", paddingTop: "1rem", marginTop: ".5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem" }}>
+              <span style={{ fontSize: ".75rem", color: "#666", textTransform: "uppercase", letterSpacing: ".05em" }}>Itens da Venda</span>
+              <button style={{ ...btn("ghost"), padding: "4px 10px", fontSize: ".75rem" }} onClick={addItem}>+ Adicionar item</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 6, marginBottom: 4 }}>
+              {["Produto", "Qtd", "Preço unit. (R$)", ""].map((h, i) => (
+                <div key={i} style={{ fontSize: ".68rem", color: "#444", textTransform: "uppercase", letterSpacing: ".05em", paddingLeft: 2 }}>{h}</div>
+              ))}
+            </div>
+            {itens.map((it, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 6, marginBottom: 8 }}>
+                <select style={inp} value={it.produtoId} onChange={e => updItem(i, "produtoId", e.target.value)}>
+                  <option value="">Produto...</option>
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} (est: {p.estoque})</option>)}
+                </select>
+                <input style={inp} type="number" placeholder="Qtd" value={it.quantidade} min={1} onChange={e => updItem(i, "quantidade", e.target.value)} />
+                <input style={inp} type="number" placeholder="R$" step=".01" value={it.preco} onChange={e => updItem(i, "preco", e.target.value)} />
+                <button style={{ background: "none", border: "none", color: "#e05a5a", cursor: "pointer", padding: "0 4px" }} onClick={() => remItem(i)}><Icon name="x" size={16} /></button>
+              </div>
+            ))}
+          </div>
+          <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1rem 1.25rem", marginTop: ".5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem" }}>
+              <span style={{ fontSize: ".82rem", color: "#666" }}>Subtotal</span>
+              <span style={{ fontSize: ".95rem", color: "#aaa", fontFamily: "'DM Mono',monospace" }}>{fmt(subtotal)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem", gap: "1rem" }}>
+              <span style={{ fontSize: ".82rem", color: "#666", whiteSpace: "nowrap" }}>% Desconto</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {[5, 10, 15, 20].map(pct => (
+                  <button key={pct} onClick={() => setForm({ ...form, desconto: form.desconto == pct ? "" : String(pct) })}
+                    style={{ padding: "3px 9px", borderRadius: 5, border: "1px solid", borderColor: Number(form.desconto) === pct ? "#e8a020" : "#2a2a2a", background: Number(form.desconto) === pct ? "#e8a02022" : "transparent", color: Number(form.desconto) === pct ? "#e8a020" : "#555", cursor: "pointer", fontSize: ".72rem", fontFamily: "'DM Mono',monospace" }}>
+                    {pct}%
+                  </button>
+                ))}
+                <div style={{ position: "relative", width: 80 }}>
+                  <input style={{ ...inp, paddingRight: 24, textAlign: "right", width: "100%", fontFamily: "'DM Mono',monospace" }}
+                    type="number" min="0" max="100" step="0.5" placeholder="0" value={form.desconto}
+                    onChange={e => setForm({ ...form, desconto: e.target.value })} />
+                  <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#555", fontSize: ".8rem", pointerEvents: "none" }}>%</span>
+                </div>
+              </div>
+            </div>
+            {descPct > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem", padding: "6px 10px", background: "#1f1a09", borderRadius: 6, border: "1px solid #5a3a0a" }}>
+                <span style={{ fontSize: ".78rem", color: "#e8a020" }}>Desconto de {descPct}%</span>
+                <span style={{ fontSize: ".88rem", color: "#e8a020", fontFamily: "'DM Mono',monospace" }}>− {fmt(valorDesconto)}</span>
+              </div>
+            )}
+            <div style={{ borderTop: "1px solid #2a2a2a", marginBottom: ".75rem" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: ".88rem", color: "#999", fontWeight: 600 }}>Total da Venda</span>
+              <div style={{ textAlign: "right" }}>
+                {descPct > 0 && <div style={{ fontSize: ".75rem", color: "#444", textDecoration: "line-through", fontFamily: "'DM Mono',monospace", marginBottom: 2 }}>{fmt(subtotal)}</div>}
+                <span style={{ color: "#c9a84c", fontWeight: 700, fontSize: "1.2rem", fontFamily: "'DM Mono',monospace" }}>{fmt(total)}</span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: "1rem" }}>
+            <button style={btn("ghost")} onClick={() => setModal(false)}>Cancelar</button>
+            <button style={btn("primary")} onClick={salvarVenda} disabled={saving}>{saving ? <><Spinner size={14} color="#0a0a08" /> Salvando...</> : "Registrar Venda"}</button>
+          </div>
+        </Modal>
+      )}
+
+      {detalhe && (
+        <Modal title={`Venda #${String(detalhe.id).slice(-4)}`} onClose={() => setDetalhe(null)}>
+          <div style={{ fontSize: ".88rem", color: "#aaa", marginBottom: "1rem" }}>
+            <b style={{ color: "#ddd" }}>{clientes.find(c => c.id === detalhe.cliente_id)?.nome}</b>
+            {" · "}{detalhe.data}
+            <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 20, background: (statusCor[detalhe.status] || "#555") + "22", color: statusCor[detalhe.status] || "#888", fontSize: ".75rem" }}>{detalhe.status}</span>
+          </div>
+          {(detalhe.venda_itens || []).map((it, i) => { const p = produtos.find(pp => pp.id === it.produto_id); return (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: ".6rem 0", borderBottom: "1px solid #1a1a1a" }}>
+              <span style={{ color: "#e0e0e0" }}>{p?.nome ?? "Produto removido"}</span>
+              <span style={{ color: "#888", fontFamily: "'DM Mono',monospace" }}>{it.quantidade}x {fmt(it.preco)} = <b style={{ color: "#ccc" }}>{fmt(it.quantidade * it.preco)}</b></span>
+            </div>
+          ); })}
+          {detalhe.desconto_pct > 0 && (
+            <div style={{ marginTop: ".75rem", padding: "8px 12px", background: "#1f1a09", borderRadius: 6, border: "1px solid #5a3a0a", display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontSize: ".82rem", color: "#e8a020" }}>Desconto ({detalhe.desconto_pct}%)</span>
+              <span style={{ fontSize: ".88rem", color: "#e8a020", fontFamily: "'DM Mono',monospace" }}>− {fmt(detalhe.desconto_valor)}</span>
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: ".75rem", fontSize: "1rem", fontWeight: 700, color: "#c9a84c", fontFamily: "'DM Mono',monospace" }}>
+            Total: {fmt(detalhe.total)}
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+// ── App Principal ─────────────────────────────────────────────────
+
+export default Vendas;

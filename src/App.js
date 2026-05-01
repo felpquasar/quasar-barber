@@ -1,25 +1,134 @@
-import logo from './logo.svg';
-import './App.css';
+import { useState, useEffect } from "react";
+import { supabase } from "./lib/supabase";
+import useStore from "./hooks/useStore";
+import { today } from "./lib/utils";
+import Login from "./components/Login";
+import Dashboard from "./components/Dashboard";
+import Estoque from "./components/Estoque";
+import Clientes from "./components/Clientes";
+import Vendas from "./components/Vendas";
+import Financeiro from "./components/Financeiro";
+import Toast from "./components/ui/Toast";
+import Spinner from "./components/ui/Spinner";
+import Icon from "./components/ui/Icon";
 
-function App() {
+const LOGO = "/logo.png";
+
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#0e0e0e;color:#e0e0e0;font-family:'DM Sans',sans-serif;}
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+  input,select,button{font-family:'DM Sans',sans-serif;}
+  input:focus,select:focus{border-color:#c9a84c!important;outline:none;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+`;
+
+export default function App() {
+  const [session, setSession] = useState(undefined);
+  const [aba, setAba] = useState("dashboard");
+  const [sidebar, setSidebar] = useState(true);
+  const { produtos, setProdutos, clientes, setClientes, vendas, setVendas, movimentos, setMovimentos, contasReceber, setContasReceber, contasPagar, setContasPagar, fornecedores, setFornecedores, loading, toast, notify, load } = useStore();
+
+  const qtdVencidas = contasReceber.filter(cr => cr.status !== "pago" && cr.data_vencimento < today()).length
+    + contasPagar.filter(cp => cp.status !== "pago" && cp.data_vencimento < today()).length;
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => { setSession(session ?? null); });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => { setSession(session ?? null); });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => { await supabase.auth.signOut(); setSession(null); };
+
+  const nav = [
+    { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+    { id: "estoque", label: "Estoque", icon: "box" },
+    { id: "clientes", label: "Clientes", icon: "users" },
+    { id: "vendas", label: "Vendas", icon: "cart" },
+    { id: "financeiro", label: "Financeiro", icon: "money", badge: qtdVencidas },
+  ];
+
+  if (session === undefined) return (
+    <><style>{styles}</style>
+      <div style={{ minHeight: "100vh", background: "#080806", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, color: "#444" }}>
+        <Spinner size={28} /><span style={{ fontSize: ".85rem" }}>Carregando...</span>
+      </div>
+    </>
+  );
+
+  if (!session) return (
+    <><style>{styles.replace("background:#0e0e0e", "background:#080806")}</style>
+      <Login onLogin={(s) => setSession(s)} />
+    </>
+  );
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      <style>{styles}</style>
+      {toast && <Toast msg={toast.msg} type={toast.type} />}
+      <div style={{ display: "flex", minHeight: "100vh", background: "#0e0e0e" }}>
+        <aside style={{ width: sidebar ? 220 : 64, flexShrink: 0, background: "#111", borderRight: "1px solid #1a1a1a", display: "flex", flexDirection: "column", transition: "width .2s" }}>
+          <div style={{ padding: "1.5rem 1.25rem", borderBottom: "1px solid #1f1f1f", display: "flex", alignItems: "center", gap: 10 }}>
+            <img src={LOGO} alt="logo" style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+            {sidebar && (
+              <div>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: ".95rem", color: "#e8c97a", lineHeight: 1.2 }}>Quasar Barber</div>
+                <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".08em" }}>Gestão</div>
+              </div>
+            )}
+          </div>
+          <nav style={{ flex: 1, padding: ".75rem .5rem" }}>
+            {nav.map(n => (
+              <button key={n.id} onClick={() => setAba(n.id)}
+                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: aba === n.id ? "#1f1f12" : "transparent", color: aba === n.id ? "#e8c97a" : "#666", marginBottom: 2, textAlign: "left", transition: "all .15s" }}>
+                <span style={{ position: "relative", flexShrink: 0 }}>
+                  <Icon name={n.icon} size={18} />
+                  {!sidebar && n.badge > 0 && (
+                    <span style={{ position: "absolute", top: -3, right: -3, width: 7, height: 7, background: "#e05a5a", borderRadius: "50%", border: "1px solid #111" }} />
+                  )}
+                </span>
+                {sidebar && <span style={{ flex: 1 }}>{n.label}</span>}
+                {sidebar && n.badge > 0 && (
+                  <span style={{ background: "#e05a5a", color: "#fff", borderRadius: 10, padding: "1px 6px", fontSize: ".65rem", fontWeight: 700, minWidth: 18, textAlign: "center" }}>
+                    {n.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+          <div style={{ borderTop: "1px solid #1f1f1f", padding: ".75rem .5rem" }}>
+            {sidebar && (
+              <div style={{ padding: "6px 12px", marginBottom: 4 }}>
+                <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".05em" }}>Usuário</div>
+                <div style={{ fontSize: ".78rem", color: "#666", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.email}</div>
+              </div>
+            )}
+            <button onClick={handleLogout}
+              style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "#555", textAlign: "left" }}>
+              <span style={{ flexShrink: 0 }}><Icon name="logout" size={17} /></span>
+              {sidebar && "Sair"}
+            </button>
+          </div>
+          <button onClick={() => setSidebar(p => !p)}
+            style={{ margin: "0 .5rem .75rem", padding: "8px", borderRadius: 8, border: "1px solid #1f1f1f", background: "transparent", color: "#444", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: ".75rem" }}>
+            <span>{sidebar ? "◀" : "▶"}</span>{sidebar && "Recolher"}
+          </button>
+        </aside>
+        <main style={{ flex: 1, padding: "2rem", overflowY: "auto", maxHeight: "100vh" }}>
+          {loading
+            ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", gap: 12, color: "#444" }}><Spinner size={24} /><span>Carregando dados...</span></div>
+            : <>
+              {aba === "dashboard" && <Dashboard produtos={produtos} clientes={clientes} vendas={vendas} movimentos={movimentos} contasReceber={contasReceber} reload={load} />}
+              {aba === "estoque" && <Estoque produtos={produtos} setProdutos={setProdutos} setMovimentos={setMovimentos} notify={notify} />}
+              {aba === "clientes" && <Clientes clientes={clientes} setClientes={setClientes} vendas={vendas} produtos={produtos} notify={notify} />}
+              {aba === "vendas" && <Vendas vendas={vendas} setVendas={setVendas} clientes={clientes} produtos={produtos} setProdutos={setProdutos} setMovimentos={setMovimentos} setContasReceber={setContasReceber} notify={notify} />}
+              {aba === "financeiro" && <Financeiro contasReceber={contasReceber} setContasReceber={setContasReceber} contasPagar={contasPagar} setContasPagar={setContasPagar} fornecedores={fornecedores} setFornecedores={setFornecedores} clientes={clientes} notify={notify} />}
+            </>
+          }
+        </main>
+      </div>
+    </>
   );
 }
-
-export default App;
