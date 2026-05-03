@@ -79,7 +79,7 @@ export default function App() {
             <img src={LOGO} alt="logo" style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
             {sidebar && (
               <div>
-                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: ".95rem", color: "#c984ac", lineHeight: 1.2 }}>Quasar Barber</div>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: ".95rem", color: "#c9a84c", lineHeight: 1.2 }}>Quasar Barber</div>
                 <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".08em" }}>Gestão</div>
               </div>
             )}
@@ -87,7 +87,7 @@ export default function App() {
           <nav style={{ flex: 1, padding: ".75rem .5rem" }}>
             {nav.map(n => (
               <button key={n.id} onClick={() => setAba(n.id)}
-                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: aba === n.id ? "#1f1f12" : "transparent", color: aba === n.id ? "#c984ac" : "#666", marginBottom: 2, textAlign: "left", transition: "all .15s" }}>
+                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: aba === n.id ? "#1f1f12" : "transparent", color: aba === n.id ? "#c9a84c" : "#666", marginBottom: 2, textAlign: "left", transition: "all .15s" }}>
                 <span style={{ position: "relative", flexShrink: 0 }}>
                   <Icon name={n.icon} size={18} />
                   {!sidebar && n.badge > 0 && (
@@ -139,7 +139,7 @@ export default function App() {
         <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #1a1a1a", display: "flex", zIndex: 100, height: 58 }}>
           {nav.map(n => (
             <button key={n.id} onClick={() => setAba(n.id)}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "none", background: "transparent", cursor: "pointer", color: aba === n.id ? "#c984ac" : "#444", gap: 3, padding: "6px 0" }}>
+              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "none", background: "transparent", cursor: "pointer", color: aba === n.id ? "#c9a84c" : "#444", gap: 3, padding: "6px 0" }}>
               <span style={{ position: "relative" }}>
                 <Icon name={n.icon} size={19} />
                 {n.badge > 0 && (

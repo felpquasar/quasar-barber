@@ -88,7 +88,7 @@ const FluxoCaixa = ({ contasReceber, contasPagar, clientes, fornecedores }) => {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c984ac", margin: 0 }}>Fluxo de Caixa</h2>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Fluxo de Caixa</h2>
         <div style={{ display: "flex", gap: 6 }}>
           {[["3m", "3 Meses"], ["6m", "6 Meses"], ["12m", "12 Meses"]].map(([v, l]) => (
             <button key={v} onClick={() => setPeriodo(v)}

@@ -23,7 +23,7 @@ const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPag
       <div style={{ display: "flex", gap: 0, marginBottom: "1.75rem", borderBottom: "1px solid #1f1f1f", overflowX: "auto" }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setAba(t.id)}
-            style={{ padding: "8px 16px 11px", border: "none", borderBottom: `2px solid ${aba === t.id ? "#ffbf00" : "transparent"}`, background: "transparent", cursor: "pointer", color: aba === t.id ? "#c984ac" : "#555", fontSize: ".88rem", fontWeight: aba === t.id ? 600 : 400, display: "inline-flex", alignItems: "center", gap: 7, transition: "all .15s", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0 }}>
+            style={{ padding: "8px 16px 11px", border: "none", borderBottom: `2px solid ${aba === t.id ? "#ffbf00" : "transparent"}`, background: "transparent", cursor: "pointer", color: aba === t.id ? "#c9a84c" : "#555", fontSize: ".88rem", fontWeight: aba === t.id ? 600 : 400, display: "inline-flex", alignItems: "center", gap: 7, transition: "all .15s", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0 }}>
             {t.label}
             {t.badge > 0 && (
               <span style={{ background: "#e05a5a", color: "#fff", borderRadius: 10, padding: "1px 6px", fontSize: ".65rem", fontWeight: 700, minWidth: 18, textAlign: "center" }}>

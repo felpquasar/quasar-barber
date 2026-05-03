@@ -49,7 +49,7 @@ const LineAreaChart = ({ dados }) => {
     <div style={{ position: "relative", width: "100%" }}>
       <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 24, height: 2, background: "linear-gradient(90deg,#ffbf00,#c984ac)", borderRadius: 2 }} />
+          <div style={{ width: 24, height: 2, background: "linear-gradient(90deg,#ffbf00,#c9a84c)", borderRadius: 2 }} />
           <span style={{ fontSize: ".72rem", color: "#777", textTransform: "uppercase", letterSpacing: ".05em" }}>Faturamento</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

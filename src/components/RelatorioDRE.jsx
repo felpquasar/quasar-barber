@@ -66,7 +66,7 @@ const RelatorioDRE = ({ contasReceber, contasPagar }) => {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
         <div>
-          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c984ac", margin: 0 }}>DRE — Demonstrativo de Resultado</h2>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>DRE — Demonstrativo de Resultado</h2>
           <div style={{ fontSize: ".75rem", color: "#555", marginTop: 4 }}>Regime de caixa · entradas e saídas realizadas</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

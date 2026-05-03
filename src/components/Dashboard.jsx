@@ -97,7 +97,7 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, relo
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: 8 }}>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c984ac", margin: 0 }}>Dashboard</h2>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Dashboard</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {["semana", "mes", "trimestre"].map(p => (
             <button key={p} onClick={() => setPeriodo(p)} style={{ padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer", background: periodo === p ? "#ffbf00" : "#1a1a1a", color: periodo === p ? "#0a0a08" : "#888", fontSize: ".8rem", fontWeight: periodo === p ? 700 : 400 }}>
@@ -117,7 +117,7 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, relo
           <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Faturamento {labelPeriodo}</div>
         </div>
         <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem" }}>
-          <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#c984ac", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(tkt)}</div>
+          <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#c9a84c", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(tkt)}</div>
           <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Ticket Médio</div>
         </div>
         <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem" }}>

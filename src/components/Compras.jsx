@@ -171,7 +171,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
     <div>
       {/* Cabeçalho */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: 10, flexDirection: isMobile ? "column" : "row" }}>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c984ac", margin: 0 }}>Compras</h2>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Compras</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 4 }}>
             {["todos", "pendente", "recebido", "cancelado"].map(s => (
@@ -305,7 +305,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "1rem", marginTop: ".75rem", padding: "0 .75rem" }}>
               <span style={{ fontSize: ".8rem", color: "#555" }}>Total do Pedido</span>
-              <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#c984ac", fontFamily: "'DM Mono',monospace" }}>{fmt(totalForm)}</span>
+              <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#c9a84c", fontFamily: "'DM Mono',monospace" }}>{fmt(totalForm)}</span>
             </div>
           </div>
 
@@ -365,7 +365,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
               <tfoot>
                 <tr style={{ borderTop: "2px solid #2a2a2a", background: "#111" }}>
                   <td colSpan={3} style={{ padding: ".65rem 1rem", color: "#aaa", fontWeight: 700 }}>Total</td>
-                  <td style={{ padding: ".65rem 1rem", textAlign: "right", color: "#c984ac", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{fmt(modalVer.total)}</td>
+                  <td style={{ padding: ".65rem 1rem", textAlign: "right", color: "#c9a84c", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{fmt(modalVer.total)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -388,7 +388,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
           <div style={{ background: "#111", borderRadius: 8, padding: "1rem", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: ".7rem", color: "#555", marginBottom: 3 }}>Total do Pedido</div>
-              <div style={{ fontSize: "1.2rem", color: "#c984ac", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{fmt(modalReceber.total)}</div>
+              <div style={{ fontSize: "1.2rem", color: "#c9a84c", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{fmt(modalReceber.total)}</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: ".7rem", color: "#555", marginBottom: 3 }}>Fornecedor</div>

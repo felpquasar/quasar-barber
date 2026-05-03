@@ -58,7 +58,7 @@ const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) =>
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c984ac", margin: 0 }}>Fornecedores</h2>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Fornecedores</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <input placeholder="Buscar fornecedor..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ ...inp, width: isMobile ? "100%" : 200 }} />
           <button style={btn("primary")} onClick={() => abrir()}><Icon name="plus" size={14} /> Novo Fornecedor</button>

@@ -83,7 +83,7 @@ const RelatorioVendas = ({ vendas, clientes }) => {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c984ac", margin: 0 }}>Análise de Vendas</h2>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Análise de Vendas</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <select value={ano} onChange={e => setAno(Number(e.target.value))} style={{ ...inp, width: 90 }}>
             {anos.map(a => <option key={a} value={a}>{a}</option>)}
