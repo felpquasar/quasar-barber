@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
@@ -8,6 +9,7 @@ import Field from './ui/Field';
 import Spinner from './ui/Spinner';
 
 const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, notify }) => {
+  const isMobile = useMobile();
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -57,10 +59,10 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#e8c97a", margin: 0 }}>Clientes</h2>
         <div style={{ display: "flex", gap: 8 }}>
-          <input placeholder="Buscar cliente..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ ...inp, width: 200 }} />
+          <input placeholder="Buscar cliente..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ ...inp, width: isMobile ? "100%" : 200 }} />
           <button style={btn("primary")} onClick={() => abrir()}><Icon name="plus" size={14} /> Novo Cliente</button>
         </div>
       </div>
@@ -132,11 +134,11 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
         <Modal title={editando ? "Editar Cliente" : "Novo Cliente"} onClose={() => setModal(false)}>
           <Field label="Nome / Razão Social"><input style={inp} value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} /></Field>
           <Field label="Nome do Contato"><input style={inp} value={form.contato} onChange={e => setForm({ ...form, contato: e.target.value })} /></Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
             <Field label="Telefone"><input style={inp} value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} /></Field>
             <Field label="Cidade"><input style={inp} value={form.cidade} onChange={e => setForm({ ...form, cidade: e.target.value })} /></Field>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
             <Field label="Tipo">
               <select style={inp} value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
                 {["Barbearia", "Salão", "Distribuidor", "Outros"].map(t => <option key={t}>{t}</option>)}

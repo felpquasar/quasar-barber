@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
@@ -11,6 +12,7 @@ import Compras from './Compras';
 const TABS = [{ id: "produtos", label: "Produtos" }, { id: "compras", label: "Compras" }];
 
 const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, setContasPagar, pedidosCompra, setPedidosCompra }) => {
+  const isMobile = useMobile();
   const [abaEstoque, setAbaEstoque] = useState("produtos");
   const [modalProd, setModalProd] = useState(false);
   const [modalMov, setModalMov] = useState(null);
@@ -88,15 +90,15 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
 
       {abaEstoque === "produtos" && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
             <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#e8c97a", margin: 0 }}>Produtos</h2>
             <div style={{ display: "flex", gap: 8 }}>
-              <input placeholder="Buscar produto..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ ...inp, width: 200 }} />
+              <input placeholder="Buscar produto..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ ...inp, width: isMobile ? "100%" : 200 }} />
               <button style={btn("primary")} onClick={() => setModalProd(true)}><Icon name="plus" size={14} /> Novo Produto</button>
             </div>
           </div>
-          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
+          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 520 }}>
               <thead><tr style={{ background: "#111" }}>
                 {["Produto", "Categoria", "Estoque", "Custo", "Preço Venda", "Ações"].map(h => (
                   <th key={h} style={{ padding: ".75rem 1rem", textAlign: "left", fontSize: ".72rem", color: "#555", textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 600 }}>{h}</th>
@@ -128,7 +130,7 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
             <Modal title="Cadastrar Produto" onClose={() => setModalProd(false)}>
               <Field label="Nome do Produto"><input style={inp} value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} /></Field>
               <Field label="Categoria"><input style={inp} value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} /></Field>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
                 <Field label="Estoque Inicial"><input style={inp} type="number" value={form.estoque} onChange={e => setForm({ ...form, estoque: e.target.value })} /></Field>
                 <Field label="Unidade"><input style={inp} value={form.unidade} onChange={e => setForm({ ...form, unidade: e.target.value })} /></Field>
                 <Field label="Custo (R$)"><input style={inp} type="number" step=".01" value={form.custo} onChange={e => { const custo = e.target.value; const preco = calcPreco(custo, form.lucro); setForm({ ...form, custo, preco }); }} /></Field>
@@ -177,7 +179,7 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
                   ))}
                 </div>
               </Field>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
                 <Field label="Quantidade"><input style={inp} type="number" value={movForm.quantidade} onChange={e => setMovForm({ ...movForm, quantidade: e.target.value })} /></Field>
                 <Field label="Data"><input style={inp} type="date" value={movForm.data} onChange={e => setMovForm({ ...movForm, data: e.target.value })} /></Field>
               </div>
@@ -197,7 +199,7 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
               </div>
               <Field label="Nome do Produto"><input style={inp} value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} /></Field>
               <Field label="Categoria"><input style={inp} value={editForm.categoria} onChange={e => setEditForm({ ...editForm, categoria: e.target.value })} /></Field>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
                 <Field label="Unidade"><input style={inp} value={editForm.unidade} onChange={e => setEditForm({ ...editForm, unidade: e.target.value })} /></Field>
                 <div />
                 <Field label="Custo (R$)"><input style={inp} type="number" step=".01" value={editForm.custo} onChange={e => { const custo = e.target.value; const preco = calcPreco(custo, editForm.lucro); setEditForm({ ...editForm, custo, preco }); }} /></Field>

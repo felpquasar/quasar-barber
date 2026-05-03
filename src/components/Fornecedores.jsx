@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
@@ -8,6 +9,7 @@ import Field from './ui/Field';
 import Spinner from './ui/Spinner';
 
 const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) => {
+  const isMobile = useMobile();
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -55,10 +57,10 @@ const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) =>
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#e8c97a", margin: 0 }}>Fornecedores</h2>
         <div style={{ display: "flex", gap: 8 }}>
-          <input placeholder="Buscar fornecedor..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ ...inp, width: 200 }} />
+          <input placeholder="Buscar fornecedor..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ ...inp, width: isMobile ? "100%" : 200 }} />
           <button style={btn("primary")} onClick={() => abrir()}><Icon name="plus" size={14} /> Novo Fornecedor</button>
         </div>
       </div>
@@ -105,7 +107,7 @@ const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) =>
           <Field label="Nome do Contato">
             <input style={inp} value={form.contato} onChange={e => setForm({ ...form, contato: e.target.value })} />
           </Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
             <Field label="Telefone">
               <input style={inp} value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} />
             </Field>

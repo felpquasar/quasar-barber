@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
@@ -23,6 +24,7 @@ const diasAtraso = (vencimento) =>
   Math.floor((new Date(today() + "T12:00:00") - new Date(vencimento + "T12:00:00")) / 86400000);
 
 const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) => {
+  const isMobile = useMobile();
   const [filtro, setFiltro] = useState("todos");
   const [modalNova, setModalNova] = useState(false);
   const [modalPagar, setModalPagar] = useState(null);
@@ -97,7 +99,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#e8c97a", margin: 0 }}>Contas a Receber</h2>
         <button style={btn("primary")} onClick={() => setModalNova(true)}><Icon name="plus" size={14} /> Nova Cobrança</button>
       </div>
@@ -143,8 +145,8 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
       </div>
 
       {/* Tabela */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 580 }}>
           <thead>
             <tr style={{ background: "#111" }}>
               {["Cliente", "Descrição", "Forma", "Vencimento", "Valor", "Status", "Ações"].map(h => (
@@ -219,7 +221,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
           <Field label="Descrição">
             <input style={inp} value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} placeholder="Ex: Pedido de fevereiro" />
           </Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
             <Field label="Valor (R$) *">
               <input style={inp} type="number" step=".01" min="0" value={form.valor} onChange={e => setForm({ ...form, valor: e.target.value })} />
             </Field>

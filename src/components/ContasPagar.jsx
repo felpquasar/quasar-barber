@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
@@ -28,6 +29,7 @@ const diasAtraso = (vencimento) =>
   Math.floor((new Date(today() + "T12:00:00") - new Date(vencimento + "T12:00:00")) / 86400000);
 
 const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
+  const isMobile = useMobile();
   const [filtro, setFiltro] = useState("todos");
   const [modalNova, setModalNova] = useState(false);
   const [modalPagar, setModalPagar] = useState(null);
@@ -103,7 +105,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#e8c97a", margin: 0 }}>Contas a Pagar</h2>
         <button style={btn("primary")} onClick={() => setModalNova(true)}><Icon name="plus" size={14} /> Nova Conta</button>
       </div>
@@ -145,8 +147,8 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
         ))}
       </div>
 
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 580 }}>
           <thead>
             <tr style={{ background: "#111" }}>
               {["Descrição", "Categoria", "Fornecedor", "Vencimento", "Valor", "Status", "Ações"].map(h => (
@@ -233,7 +235,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
               {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
             </select>
           </Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
             <Field label="Valor (R$) *">
               <input style={inp} type="number" step=".01" min="0" value={form.valor} onChange={e => setForm({ ...form, valor: e.target.value })} />
             </Field>

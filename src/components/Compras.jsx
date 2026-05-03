@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
@@ -14,6 +15,7 @@ const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", transf
 const ITEM_VAZIO = { produto_id: "", quantidade: "", custo_unitario: "" };
 
 const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContasPagar, pedidosCompra, setPedidosCompra, notify }) => {
+  const isMobile = useMobile();
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [modalNovo, setModalNovo] = useState(false);
   const [modalVer, setModalVer] = useState(null);
@@ -168,7 +170,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
   return (
     <div>
       {/* Cabeçalho */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: 10, flexDirection: isMobile ? "column" : "row" }}>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#e8c97a", margin: 0 }}>Compras</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 4 }}>
@@ -184,8 +186,8 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
       </div>
 
       {/* Tabela de pedidos */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 560 }}>
           <thead>
             <tr style={{ background: "#111" }}>
               {["Data", "Fornecedor", "Itens", "Total", "Data Prevista", "Status", "Ações"].map((h, i) => (
@@ -237,7 +239,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
       {/* Modal: Novo Pedido */}
       {modalNovo && (
         <Modal title="Novo Pedido de Compra" onClose={() => setModalNovo(false)} wide>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: "1rem" }}>
             <Field label="Fornecedor">
               <select style={inp} value={form.fornecedor_id} onChange={e => setForm(f => ({ ...f, fornecedor_id: e.target.value }))}>
                 <option value="">Sem fornecedor</option>
@@ -261,8 +263,8 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
               <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Itens do Pedido</div>
               <button style={{ ...btn("ghost"), padding: "4px 10px", fontSize: ".78rem" }} onClick={addItem}><Icon name="plus" size={13} /> Adicionar Item</button>
             </div>
-            <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 8, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 8, overflow: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 460 }}>
                 <thead>
                   <tr style={{ background: "#161616" }}>
                     {["Produto", "Qtd", "Custo Unit. (R$)", "Subtotal", ""].map((h, i) => (
@@ -411,7 +413,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
           </div>
 
           {receberForm.gerar_conta && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <Field label="Forma de Pagamento">
                 <select style={inp} value={receberForm.forma_pagamento} onChange={e => setReceberForm(f => ({ ...f, forma_pagamento: e.target.value }))}>
                   {Object.entries(FORMA_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}

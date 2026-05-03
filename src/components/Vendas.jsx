@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today, addDays } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
@@ -12,6 +13,7 @@ const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", fiado:
 const PRAZOS = [{ label: "À Vista", dias: 0 }, { label: "30d", dias: 30 }, { label: "60d", dias: 60 }, { label: "90d", dias: 90 }];
 
 const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimentos, setContasReceber, notify }) => {
+  const isMobile = useMobile();
   const [modal, setModal] = useState(false);
   const [detalhe, setDetalhe] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -175,7 +177,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#e8c97a", margin: 0 }}>Vendas</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button style={btn("ghost")} onClick={exportarPDF}><Icon name="print" size={14} /> Exportar PDF</button>
@@ -186,7 +188,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
       {/* Filtros */}
       <div style={{ display: "flex", gap: 8, marginBottom: ".75rem", flexWrap: "wrap", alignItems: "center" }}>
         <input placeholder="Buscar por cliente..." value={busca} onChange={e => setBusca(e.target.value)}
-          style={{ ...inp, width: 200 }} />
+          style={{ ...inp, width: isMobile ? "100%" : 200 }} />
         <div style={{ display: "flex", gap: 4 }}>
           {["todos", "pendente", "pago", "cancelado"].map(s => (
             <button key={s} onClick={() => setFiltroStatus(s)}
@@ -216,8 +218,8 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
         <span style={{ color: "#c9a84c", fontFamily: "'DM Mono',monospace" }}>{fmt(totalFiltrado)}</span>
       </div>
 
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 600 }}>
           <thead><tr style={{ background: "#111" }}>
             {["#", "Data", "Cliente", "Itens", "Desconto", "Total", "Status", "Ações"].map(h => (
               <th key={h} style={{ padding: ".75rem 1rem", textAlign: "left", fontSize: ".72rem", color: "#555", textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 600 }}>{h}</th>
@@ -262,7 +264,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
 
       {modal && (
         <Modal title="Registrar Venda" onClose={() => setModal(false)} wide>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
             <Field label="Cliente">
               <select style={inp} value={form.clienteId} onChange={e => setForm({ ...form, clienteId: e.target.value })}>
                 <option value="">Selecionar cliente...</option>
@@ -271,7 +273,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
             </Field>
             <Field label="Data"><input style={inp} type="date" value={form.data} onChange={e => setForm({ ...form, data: e.target.value })} /></Field>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
             <Field label="Status">
               <div style={{ display: "flex", gap: 8 }}>
                 {["pendente", "pago"].map(s => (
@@ -311,12 +313,26 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
               <span style={{ fontSize: ".75rem", color: "#666", textTransform: "uppercase", letterSpacing: ".05em" }}>Itens da Venda</span>
               <button style={{ ...btn("ghost"), padding: "4px 10px", fontSize: ".75rem" }} onClick={addItem}>+ Adicionar item</button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 6, marginBottom: 4 }}>
-              {["Produto", "Qtd", "Preço unit. (R$)", ""].map((h, i) => (
-                <div key={i} style={{ fontSize: ".68rem", color: "#444", textTransform: "uppercase", letterSpacing: ".05em", paddingLeft: 2 }}>{h}</div>
-              ))}
-            </div>
-            {itens.map((it, i) => (
+            {!isMobile && (
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 6, marginBottom: 4 }}>
+                {["Produto", "Qtd", "Preço unit. (R$)", ""].map((h, i) => (
+                  <div key={i} style={{ fontSize: ".68rem", color: "#444", textTransform: "uppercase", letterSpacing: ".05em", paddingLeft: 2 }}>{h}</div>
+                ))}
+              </div>
+            )}
+            {itens.map((it, i) => isMobile ? (
+              <div key={i} style={{ marginBottom: 10 }}>
+                <select style={{ ...inp, width: "100%", marginBottom: 6 }} value={it.produtoId} onChange={e => updItem(i, "produtoId", e.target.value)}>
+                  <option value="">Produto...</option>
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} (est: {p.estoque})</option>)}
+                </select>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input style={{ ...inp, flex: 1 }} type="number" placeholder="Qtd" value={it.quantidade} min={1} onChange={e => updItem(i, "quantidade", e.target.value)} />
+                  <input style={{ ...inp, flex: 1 }} type="number" placeholder="R$" step=".01" value={it.preco} onChange={e => updItem(i, "preco", e.target.value)} />
+                  <button style={{ background: "none", border: "none", color: "#e05a5a", cursor: "pointer", padding: "0 4px" }} onClick={() => remItem(i)}><Icon name="x" size={16} /></button>
+                </div>
+              </div>
+            ) : (
               <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 6, marginBottom: 8 }}>
                 <select style={inp} value={it.produtoId} onChange={e => updItem(i, "produtoId", e.target.value)}>
                   <option value="">Produto...</option>
