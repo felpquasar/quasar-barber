@@ -33,9 +33,11 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
   const [filtro, setFiltro] = useState("todos");
   const [modalNova, setModalNova] = useState(false);
   const [modalPagar, setModalPagar] = useState(null);
+  const [modalEditar, setModalEditar] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ fornecedorId: "", descricao: "", categoria: "outros", valor: "", forma: "a_vista", vencimento: today(), obs: "" });
   const [pagarForm, setPagarForm] = useState({ forma: "a_vista", data: today() });
+  const [editForm, setEditForm] = useState({});
 
   const lista = useMemo(() => {
     return contasPagar
@@ -92,6 +94,39 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
       setContasPagar(prev => prev.map(cp => cp.id === modalPagar.id ? data : cp));
       setModalPagar(null);
       notify("Pagamento registrado!");
+    } finally { setSaving(false); }
+  };
+
+  const abrirEditar = (cp) => {
+    setEditForm({
+      fornecedorId: cp.fornecedor_id ? String(cp.fornecedor_id) : "",
+      descricao: cp.descricao || "",
+      categoria: cp.categoria || "outros",
+      valor: String(cp.valor),
+      forma: cp.forma_pagamento || "a_vista",
+      vencimento: cp.data_vencimento || today(),
+      obs: cp.obs || "",
+    });
+    setModalEditar(cp);
+  };
+
+  const salvarEdicao = async () => {
+    if (!editForm.descricao || !editForm.valor || !editForm.vencimento) { notify("Preencha todos os campos obrigatórios.", "error"); return; }
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.from("contas_pagar").update({
+        fornecedor_id: editForm.fornecedorId ? Number(editForm.fornecedorId) : null,
+        descricao: editForm.descricao,
+        categoria: editForm.categoria,
+        valor: Number(editForm.valor),
+        forma_pagamento: editForm.forma,
+        data_vencimento: editForm.vencimento,
+        obs: editForm.obs,
+      }).eq("id", modalEditar.id).select().single();
+      if (error) { notify(`Erro ao salvar: ${error.message}`, "error"); return; }
+      setContasPagar(prev => prev.map(cp => cp.id === modalEditar.id ? data : cp));
+      setModalEditar(null);
+      notify("Conta atualizada!");
     } finally { setSaving(false); }
   };
 
@@ -186,11 +221,18 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
                   <td style={{ padding: ".8rem 1rem" }}>
                     <div style={{ display: "flex", gap: 6 }}>
                       {cp._status !== "pago" && (
-                        <button
-                          onClick={() => { setModalPagar(cp); setPagarForm({ forma: cp.forma_pagamento || "a_vista", data: today() }); }}
-                          style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#4caf8222", color: "#4caf82", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }}>
-                          <Icon name="check" size={13} /> Pagar
-                        </button>
+                        <>
+                          <button
+                            onClick={() => { setModalPagar(cp); setPagarForm({ forma: cp.forma_pagamento || "a_vista", data: today() }); }}
+                            style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#4caf8222", color: "#4caf82", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }}>
+                            <Icon name="check" size={13} /> Pagar
+                          </button>
+                          <button
+                            onClick={() => abrirEditar(cp)}
+                            style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#6b9fd422", color: "#6b9fd4", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }}>
+                            <Icon name="pencil" size={13} /> Editar
+                          </button>
+                        </>
                       )}
                       <button onClick={() => excluir(cp.id)} style={{ ...btn("danger"), padding: "4px 10px", fontSize: ".75rem" }}>
                         <Icon name="trash" size={12} />
@@ -263,6 +305,63 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
             <button style={btn("ghost")} onClick={() => setModalNova(false)}>Cancelar</button>
             <button style={btn("primary")} onClick={salvarNova} disabled={saving}>
               {saving ? <><Spinner size={14} color="#0a0a08" /> Salvando...</> : "Lançar Conta"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {modalEditar && (
+        <Modal title="Editar Conta a Pagar" onClose={() => setModalEditar(null)}>
+          <Field label="Descrição *">
+            <input style={inp} value={editForm.descricao} onChange={e => setEditForm({ ...editForm, descricao: e.target.value })} autoFocus />
+          </Field>
+          <Field label="Categoria">
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {CATEGORIAS.map(c => (
+                <button key={c} onClick={() => setEditForm({ ...editForm, categoria: c })}
+                  style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${editForm.categoria === c ? CAT_COR[c] : "#333"}`, cursor: "pointer",
+                    background: editForm.categoria === c ? CAT_COR[c] + "22" : "transparent",
+                    color: editForm.categoria === c ? CAT_COR[c] : "#666",
+                    fontSize: ".78rem", fontWeight: editForm.categoria === c ? 700 : 400 }}>
+                  {CAT_LABEL[c]}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Fornecedor">
+            <select style={inp} value={editForm.fornecedorId} onChange={e => setEditForm({ ...editForm, fornecedorId: e.target.value })}>
+              <option value="">Sem fornecedor</option>
+              {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+            </select>
+          </Field>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
+            <Field label="Valor (R$) *">
+              <input style={inp} type="number" step=".01" min="0" value={editForm.valor} onChange={e => setEditForm({ ...editForm, valor: e.target.value })} />
+            </Field>
+            <Field label="Vencimento *">
+              <input style={inp} type="date" value={editForm.vencimento} onChange={e => setEditForm({ ...editForm, vencimento: e.target.value })} />
+            </Field>
+          </div>
+          <Field label="Forma de Pagamento">
+            <div style={{ display: "flex", gap: 6 }}>
+              {FORMAS.map(f => (
+                <button key={f} onClick={() => setEditForm({ ...editForm, forma: f })}
+                  style={{ flex: 1, padding: "7px 0", borderRadius: 6, border: `1px solid ${editForm.forma === f ? FORMA_COR[f] : "#333"}`, cursor: "pointer",
+                    background: editForm.forma === f ? FORMA_COR[f] + "22" : "transparent",
+                    color: editForm.forma === f ? FORMA_COR[f] : "#666",
+                    fontSize: ".78rem", fontWeight: editForm.forma === f ? 700 : 400 }}>
+                  {FORMA_LABEL[f]}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Observação">
+            <input style={inp} value={editForm.obs} onChange={e => setEditForm({ ...editForm, obs: e.target.value })} />
+          </Field>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+            <button style={btn("ghost")} onClick={() => setModalEditar(null)}>Cancelar</button>
+            <button style={btn("primary")} onClick={salvarEdicao} disabled={saving}>
+              {saving ? <><Spinner size={14} color="#0a0a08" /> Salvando...</> : "Salvar Alterações"}
             </button>
           </div>
         </Modal>

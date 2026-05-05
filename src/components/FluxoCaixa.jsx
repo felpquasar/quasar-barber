@@ -1,11 +1,75 @@
 ﻿import { useState, useMemo } from 'react';
+import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
+import { inp, btn } from '../styles/shared';
+import Icon from './ui/Icon';
+import Modal from './ui/Modal';
+import Field from './ui/Field';
+import Spinner from './ui/Spinner';
+
+const FORMAS_REC = ["a_vista", "cartao", "pix", "fiado"];
+const FORMAS_PAG = ["a_vista", "cartao", "pix", "transferencia"];
+const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", fiado: "Fiado", transferencia: "Transferência" };
+const FORMA_COR = { a_vista: "#4caf82", cartao: "#6b9fd4", pix: "#5cb8d4", fiado: "#e8a020", transferencia: "#b86fcf" };
+const CATEGORIAS = ["estoque", "aluguel", "servicos", "impostos", "outros"];
+const CAT_LABEL = { estoque: "Estoque", aluguel: "Aluguel", servicos: "Serviços", impostos: "Impostos", outros: "Outros" };
+const CAT_COR = { estoque: "#ffbf00", aluguel: "#6b9fd4", servicos: "#5cb8d4", impostos: "#e05a5a", outros: "#888" };
 
 const MESES_LABEL = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
-const FluxoCaixa = ({ contasReceber, contasPagar, clientes, fornecedores }) => {
+const FluxoCaixa = ({ contasReceber, setContasReceber, contasPagar, setContasPagar, clientes, fornecedores, notify }) => {
   const [periodo, setPeriodo] = useState("3m");
   const [tooltip, setTooltip] = useState(null);
+  const [modalEditar, setModalEditar] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  const abrirEditar = (item) => {
+    setEditForm({
+      descricao: item.descricao || "",
+      valor: String(item.valor),
+      vencimento: item.data_vencimento || today(),
+      forma: item.forma_pagamento || (item.tipo === "receber" ? "fiado" : "a_vista"),
+      clienteId: item.cliente_id ? String(item.cliente_id) : "",
+      fornecedorId: item.fornecedor_id ? String(item.fornecedor_id) : "",
+      categoria: item.categoria || "outros",
+      obs: item.obs || "",
+    });
+    setModalEditar(item);
+  };
+
+  const salvarEdicao = async () => {
+    if (!editForm.valor || !editForm.vencimento) { notify("Preencha valor e vencimento.", "error"); return; }
+    setSaving(true);
+    try {
+      if (modalEditar.tipo === "receber") {
+        const { data, error } = await supabase.from("contas_receber").update({
+          descricao: editForm.descricao,
+          valor: Number(editForm.valor),
+          data_vencimento: editForm.vencimento,
+          forma_pagamento: editForm.forma,
+          cliente_id: editForm.clienteId ? Number(editForm.clienteId) : null,
+          obs: editForm.obs,
+        }).eq("id", modalEditar.id).select().single();
+        if (error) { notify(`Erro: ${error.message}`, "error"); return; }
+        setContasReceber(prev => prev.map(cr => cr.id === modalEditar.id ? data : cr));
+      } else {
+        const { data, error } = await supabase.from("contas_pagar").update({
+          descricao: editForm.descricao,
+          valor: Number(editForm.valor),
+          data_vencimento: editForm.vencimento,
+          forma_pagamento: editForm.forma,
+          fornecedor_id: editForm.fornecedorId ? Number(editForm.fornecedorId) : null,
+          categoria: editForm.categoria,
+          obs: editForm.obs,
+        }).eq("id", modalEditar.id).select().single();
+        if (error) { notify(`Erro: ${error.message}`, "error"); return; }
+        setContasPagar(prev => prev.map(cp => cp.id === modalEditar.id ? data : cp));
+      }
+      setModalEditar(null);
+      notify("Atualizado!");
+    } finally { setSaving(false); }
+  };
 
   const { meses, totais, proximos } = useMemo(() => {
     const now = new Date();
@@ -258,13 +322,19 @@ const FluxoCaixa = ({ contasReceber, contasPagar, clientes, fornecedores }) => {
                       {isReceber ? `Cliente: ${item.entidade}` : `Fornecedor: ${item.entidade}`}
                     </div>
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: ".9rem", fontWeight: 700, color: isReceber ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace" }}>
-                      {isReceber ? "+" : "−"}{fmt(item.valor)}
+                  <div style={{ textAlign: "right", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: ".9rem", fontWeight: 700, color: isReceber ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace" }}>
+                        {isReceber ? "+" : "−"}{fmt(item.valor)}
+                      </div>
+                      <div style={{ fontSize: ".72rem", color: "#555", marginTop: 2, fontFamily: "'DM Mono',monospace" }}>
+                        {item.data_vencimento} · {diasFaltam === 0 ? "hoje" : `em ${diasFaltam}d`}
+                      </div>
                     </div>
-                    <div style={{ fontSize: ".72rem", color: "#555", marginTop: 2, fontFamily: "'DM Mono',monospace" }}>
-                      {item.data_vencimento} · {diasFaltam === 0 ? "hoje" : `em ${diasFaltam}d`}
-                    </div>
+                    <button onClick={() => abrirEditar(item)}
+                      style={{ background: "#6b9fd422", border: "none", cursor: "pointer", color: "#6b9fd4", borderRadius: 6, padding: "4px 8px", display: "flex", alignItems: "center", gap: 4, fontSize: ".75rem" }}>
+                      <Icon name="pencil" size={12} /> Editar
+                    </button>
                   </div>
                 </div>
               );
@@ -272,6 +342,74 @@ const FluxoCaixa = ({ contasReceber, contasPagar, clientes, fornecedores }) => {
           </div>
         )}
       </div>
+
+      {modalEditar && (
+        <Modal title={modalEditar.tipo === "receber" ? "Editar Cobrança" : "Editar Conta a Pagar"} onClose={() => setModalEditar(null)}>
+          {modalEditar.tipo === "receber" ? (
+            <Field label="Cliente">
+              <select style={inp} value={editForm.clienteId} onChange={e => setEditForm({ ...editForm, clienteId: e.target.value })}>
+                <option value="">Sem cliente</option>
+                {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </Field>
+          ) : (
+            <>
+              <Field label="Fornecedor">
+                <select style={inp} value={editForm.fornecedorId} onChange={e => setEditForm({ ...editForm, fornecedorId: e.target.value })}>
+                  <option value="">Sem fornecedor</option>
+                  {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                </select>
+              </Field>
+              <Field label="Categoria">
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {CATEGORIAS.map(c => (
+                    <button key={c} onClick={() => setEditForm({ ...editForm, categoria: c })}
+                      style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${editForm.categoria === c ? CAT_COR[c] : "#333"}`, cursor: "pointer",
+                        background: editForm.categoria === c ? CAT_COR[c] + "22" : "transparent",
+                        color: editForm.categoria === c ? CAT_COR[c] : "#666",
+                        fontSize: ".78rem", fontWeight: editForm.categoria === c ? 700 : 400 }}>
+                      {CAT_LABEL[c]}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </>
+          )}
+          <Field label="Descrição">
+            <input style={inp} value={editForm.descricao} onChange={e => setEditForm({ ...editForm, descricao: e.target.value })} autoFocus />
+          </Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Valor (R$) *">
+              <input style={inp} type="number" step=".01" min="0" value={editForm.valor} onChange={e => setEditForm({ ...editForm, valor: e.target.value })} />
+            </Field>
+            <Field label="Vencimento *">
+              <input style={inp} type="date" value={editForm.vencimento} onChange={e => setEditForm({ ...editForm, vencimento: e.target.value })} />
+            </Field>
+          </div>
+          <Field label="Forma de Pagamento">
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {(modalEditar.tipo === "receber" ? FORMAS_REC : FORMAS_PAG).map(f => (
+                <button key={f} onClick={() => setEditForm({ ...editForm, forma: f })}
+                  style={{ flex: 1, padding: "7px 0", borderRadius: 6, border: `1px solid ${editForm.forma === f ? FORMA_COR[f] : "#333"}`, cursor: "pointer",
+                    background: editForm.forma === f ? FORMA_COR[f] + "22" : "transparent",
+                    color: editForm.forma === f ? FORMA_COR[f] : "#666",
+                    fontSize: ".78rem", fontWeight: editForm.forma === f ? 700 : 400 }}>
+                  {FORMA_LABEL[f]}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Observação">
+            <input style={inp} value={editForm.obs} onChange={e => setEditForm({ ...editForm, obs: e.target.value })} />
+          </Field>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+            <button style={btn("ghost")} onClick={() => setModalEditar(null)}>Cancelar</button>
+            <button style={btn("primary")} onClick={salvarEdicao} disabled={saving}>
+              {saving ? <><Spinner size={14} color="#0a0a08" /> Salvando...</> : "Salvar Alterações"}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

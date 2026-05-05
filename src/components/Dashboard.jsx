@@ -3,7 +3,7 @@ import { fmt, today } from '../lib/utils';
 import Icon from './ui/Icon';
 import LineAreaChart from './LineAreaChart';
 
-const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, reload }) => {
+const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, despesas, reload }) => {
   const [periodo, setPeriodo] = useState("mes");
   const agora = new Date();
   const mesAtual = agora.toISOString().slice(0, 7);
@@ -43,6 +43,9 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, relo
 
   const totalVencido = contasVencidas.reduce((a, c) => a + Number(c.valor), 0);
   const totalAReceber = (contasReceber || []).filter(cr => cr.status !== "pago").reduce((a, c) => a + Number(c.valor), 0);
+
+  const dp = (despesas || []).filter(fp);
+  const totalDespesas = dp.reduce((a, d) => a + Number(d.valor), 0);
 
   const topProd = useMemo(() => {
     const m = {};
@@ -138,6 +141,11 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, relo
           <div style={{ fontSize: "1.6rem", fontWeight: 700, color: totalVencido > 0 ? "#e05a5a" : "#e8a020", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(totalAReceber)}</div>
           <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>A Receber</div>
           {totalVencido > 0 && <div style={{ fontSize: ".7rem", color: "#e05a5a", marginTop: 4 }}>{fmt(totalVencido)} em atraso</div>}
+        </div>
+        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem" }}>
+          <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#e05a5a", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(totalDespesas)}</div>
+          <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Despesas {labelPeriodo}</div>
+          <div style={{ fontSize: ".7rem", color: "#555", marginTop: 4 }}>Anúncios · Marketing · Frete</div>
         </div>
       </div>
 

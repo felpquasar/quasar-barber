@@ -4,8 +4,9 @@ import ContasReceber from './ContasReceber';
 import ContasPagar from './ContasPagar';
 import Fornecedores from './Fornecedores';
 import FluxoCaixa from './FluxoCaixa';
+import Despesas from './Despesas';
 
-const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPagar, fornecedores, setFornecedores, clientes, notify }) => {
+const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPagar, fornecedores, setFornecedores, clientes, despesas, setDespesas, notify }) => {
   const [aba, setAba] = useState("receber");
 
   const qtdReceberVencidas = contasReceber.filter(cr => cr.status !== "pago" && cr.data_vencimento < today()).length;
@@ -16,6 +17,7 @@ const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPag
     { id: "pagar", label: "A Pagar", badge: qtdPagarVencidas },
     { id: "fornecedores", label: "Fornecedores" },
     { id: "fluxo", label: "Fluxo de Caixa" },
+    { id: "despesas", label: "Despesas" },
   ];
 
   return (
@@ -44,7 +46,10 @@ const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPag
         <Fornecedores fornecedores={fornecedores} setFornecedores={setFornecedores} contasPagar={contasPagar} notify={notify} />
       )}
       {aba === "fluxo" && (
-        <FluxoCaixa contasReceber={contasReceber} contasPagar={contasPagar} clientes={clientes} fornecedores={fornecedores} />
+        <FluxoCaixa contasReceber={contasReceber} setContasReceber={setContasReceber} contasPagar={contasPagar} setContasPagar={setContasPagar} clientes={clientes} fornecedores={fornecedores} notify={notify} />
+      )}
+      {aba === "despesas" && (
+        <Despesas despesas={despesas} setDespesas={setDespesas} notify={notify} />
       )}
     </div>
   );

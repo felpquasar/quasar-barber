@@ -15,10 +15,14 @@ const PRAZOS = [{ label: "À Vista", dias: 0 }, { label: "30d", dias: 30 }, { la
 const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimentos, setContasReceber, notify }) => {
   const isMobile = useMobile();
   const [modal, setModal] = useState(false);
+  const [modalEditar, setModalEditar] = useState(false);
+  const [editVenda, setEditVenda] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30 });
   const [itens, setItens] = useState([{ produtoId: "", quantidade: 1, preco: "" }]);
+  const [editForm, setEditForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30 });
+  const [editItens, setEditItens] = useState([]);
 
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
@@ -49,10 +53,25 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
       return u;
     }));
 
+  const addEditItem = () => setEditItens(p => [...p, { produtoId: "", quantidade: 1, preco: "" }]);
+  const remEditItem = (i) => setEditItens(p => p.filter((_, idx) => idx !== i));
+  const updEditItem = (i, field, val) =>
+    setEditItens(p => p.map((it, idx) => {
+      if (idx !== i) return it;
+      const u = { ...it, [field]: val };
+      if (field === "produtoId") { const prod = produtos.find(x => x.id === Number(val)); if (prod) u.preco = prod.preco; }
+      return u;
+    }));
+
   const subtotal = itens.reduce((a, it) => a + (Number(it.quantidade) || 0) * (Number(it.preco) || 0), 0);
   const descPct = Math.min(Math.max(Number(form.desconto) || 0, 0), 100);
   const valorDesconto = subtotal * (descPct / 100);
   const total = subtotal - valorDesconto;
+
+  const editSubtotal = editItens.reduce((a, it) => a + (Number(it.quantidade) || 0) * (Number(it.preco) || 0), 0);
+  const editDescPct = Math.min(Math.max(Number(editForm.desconto) || 0, 0), 100);
+  const editValorDesconto = editSubtotal * (editDescPct / 100);
+  const editTotal = editSubtotal - editValorDesconto;
   const statusCor = { pago: "#4caf82", pendente: "#e8a020", cancelado: "#e05a5a" };
 
   const abrirModal = () => { setForm({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30 }); setItens([{ produtoId: "", quantidade: 1, preco: "" }]); setModal(true); };
@@ -92,6 +111,102 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
       setModal(false); notify("Venda registrada!");
     } catch (err) { console.error(err); notify("Erro ao salvar venda.", "error"); }
     finally { setSaving(false); }
+  };
+
+  const abrirEditar = (v) => {
+    setEditVenda(v);
+    setEditForm({
+      clienteId: v.cliente_id ? String(v.cliente_id) : "",
+      data: v.data,
+      status: v.status,
+      desconto: v.desconto_pct ? String(v.desconto_pct) : "",
+      forma: v.forma_pagamento || "fiado",
+      prazo: v.prazo_dias || 30,
+    });
+    setEditItens((v.venda_itens || []).map(it => ({
+      produtoId: String(it.produto_id),
+      quantidade: it.quantidade,
+      preco: it.preco,
+    })));
+    setModalEditar(true);
+  };
+
+  const salvarEdicao = async () => {
+    if (!editForm.clienteId || editItens.some(it => !it.produtoId || !it.quantidade || !it.preco)) {
+      notify("Preencha todos os campos da venda.", "error"); return;
+    }
+    setSaving(true);
+    try {
+      const oldItens = editVenda.venda_itens || [];
+
+      // Variação líquida de estoque por produto
+      const netChanges = {};
+      for (const it of oldItens) {
+        const pid = it.produto_id;
+        netChanges[pid] = (netChanges[pid] || 0) + Number(it.quantidade);
+      }
+      for (const it of editItens) {
+        const pid = Number(it.produtoId);
+        netChanges[pid] = (netChanges[pid] || 0) - Number(it.quantidade);
+      }
+
+      // Atualiza estoque no DB
+      for (const [pid, delta] of Object.entries(netChanges)) {
+        const prod = produtos.find(p => p.id === Number(pid));
+        if (!prod) continue;
+        await supabase.from("produtos").update({ estoque: prod.estoque + delta }).eq("id", Number(pid));
+      }
+
+      // Substitui itens
+      await supabase.from("venda_itens").delete().eq("venda_id", editVenda.id);
+      const novoItens = editItens.map(it => ({
+        venda_id: editVenda.id,
+        produto_id: Number(it.produtoId),
+        quantidade: Number(it.quantidade),
+        preco: Number(it.preco),
+      }));
+      await supabase.from("venda_itens").insert(novoItens);
+
+      // Movimento de saída para os novos itens
+      for (const it of editItens) {
+        await supabase.from("movimentos").insert({
+          produto_id: Number(it.produtoId), tipo: "saida",
+          quantidade: Number(it.quantidade), data: editForm.data,
+          obs: `Edição venda #${String(editVenda.id).slice(-4)}`,
+        });
+      }
+
+      // Atualiza a venda
+      const { data: vendaAtualizada, error: ve } = await supabase.from("vendas").update({
+        cliente_id: Number(editForm.clienteId),
+        data: editForm.data,
+        status: editForm.status,
+        total: editTotal,
+        desconto_pct: editDescPct > 0 ? editDescPct : null,
+        desconto_valor: editDescPct > 0 ? editValorDesconto : null,
+        forma_pagamento: editForm.forma,
+        prazo_dias: Number(editForm.prazo),
+      }).eq("id", editVenda.id).select().single();
+      if (ve) throw ve;
+
+      // Atualiza conta a receber pendente se existir
+      await supabase.from("contas_receber")
+        .update({ valor: editTotal, cliente_id: Number(editForm.clienteId) })
+        .eq("venda_id", editVenda.id).eq("status", "pendente");
+
+      // Atualiza estado local
+      setProdutos(prev => prev.map(p => {
+        const delta = netChanges[p.id];
+        return delta !== undefined ? { ...p, estoque: p.estoque + delta } : p;
+      }));
+      setVendas(prev => prev.map(v => v.id === editVenda.id ? { ...vendaAtualizada, venda_itens: novoItens } : v));
+      setModalEditar(false);
+      setEditVenda(null);
+      notify("Venda atualizada!");
+    } catch (err) {
+      console.error(err);
+      notify("Erro ao atualizar venda.", "error");
+    } finally { setSaving(false); }
   };
 
   const marcarPago = async (v) => {
@@ -248,6 +363,9 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
                         <Icon name="check" size={13} /> Pago
                       </button>
                     )}
+                    <button style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#6b9fd422", color: "#6b9fd4", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }} onClick={() => abrirEditar(v)}>
+                      <Icon name="pencil" size={13} /> Editar
+                    </button>
                     <button style={{ ...btn("ghost"), padding: "4px 10px", fontSize: ".75rem" }} onClick={() => setDetalhe(v)}>Ver</button>
                   </div>
                 </td>
@@ -384,6 +502,114 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: "1rem" }}>
             <button style={btn("ghost")} onClick={() => setModal(false)}>Cancelar</button>
             <button style={btn("primary")} onClick={salvarVenda} disabled={saving}>{saving ? <><Spinner size={14} color="#0a0a08" /> Salvando...</> : "Registrar Venda"}</button>
+          </div>
+        </Modal>
+      )}
+
+      {modalEditar && editVenda && (
+        <Modal title={`Editar Venda #${String(editVenda.id).slice(-4)}`} onClose={() => { setModalEditar(false); setEditVenda(null); }} wide>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
+            <Field label="Cliente">
+              <select style={inp} value={editForm.clienteId} onChange={e => setEditForm({ ...editForm, clienteId: e.target.value })}>
+                <option value="">Selecionar cliente...</option>
+                {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </Field>
+            <Field label="Data"><input style={inp} type="date" value={editForm.data} onChange={e => setEditForm({ ...editForm, data: e.target.value })} /></Field>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
+            <Field label="Status">
+              <div style={{ display: "flex", gap: 8 }}>
+                {["pendente", "pago"].map(s => (
+                  <button key={s} onClick={() => setEditForm({ ...editForm, status: s })}
+                    style={{ flex: 1, padding: "7px 0", borderRadius: 6, border: "none", cursor: "pointer", background: editForm.status === s ? (s === "pago" ? "#4caf8233" : "#e8a02033") : "#1a1a1a", color: editForm.status === s ? (s === "pago" ? "#4caf82" : "#e8a020") : "#666", fontSize: ".82rem", fontWeight: editForm.status === s ? 600 : 400, textTransform: "capitalize" }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Forma de Pagamento">
+              <select style={inp} value={editForm.forma} onChange={e => setEditForm({ ...editForm, forma: e.target.value })}>
+                {FORMAS.map(f => <option key={f} value={f}>{FORMA_LABEL[f]}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div style={{ borderTop: "1px solid #2a2a2a", paddingTop: "1rem", marginTop: ".5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem" }}>
+              <span style={{ fontSize: ".75rem", color: "#666", textTransform: "uppercase", letterSpacing: ".05em" }}>Itens da Venda</span>
+              <button style={{ ...btn("ghost"), padding: "4px 10px", fontSize: ".75rem" }} onClick={addEditItem}>+ Adicionar item</button>
+            </div>
+            {!isMobile && (
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 6, marginBottom: 4 }}>
+                {["Produto", "Qtd", "Preço unit. (R$)", ""].map((h, i) => (
+                  <div key={i} style={{ fontSize: ".68rem", color: "#444", textTransform: "uppercase", letterSpacing: ".05em", paddingLeft: 2 }}>{h}</div>
+                ))}
+              </div>
+            )}
+            {editItens.map((it, i) => isMobile ? (
+              <div key={i} style={{ marginBottom: 10 }}>
+                <select style={{ ...inp, width: "100%", marginBottom: 6 }} value={it.produtoId} onChange={e => updEditItem(i, "produtoId", e.target.value)}>
+                  <option value="">Produto...</option>
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} (est: {p.estoque})</option>)}
+                </select>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input style={{ ...inp, flex: 1 }} type="number" placeholder="Qtd" value={it.quantidade} min={1} onChange={e => updEditItem(i, "quantidade", e.target.value)} />
+                  <input style={{ ...inp, flex: 1 }} type="number" placeholder="R$" step=".01" value={it.preco} onChange={e => updEditItem(i, "preco", e.target.value)} />
+                  <button style={{ background: "none", border: "none", color: "#e05a5a", cursor: "pointer", padding: "0 4px" }} onClick={() => remEditItem(i)}><Icon name="x" size={16} /></button>
+                </div>
+              </div>
+            ) : (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 6, marginBottom: 8 }}>
+                <select style={inp} value={it.produtoId} onChange={e => updEditItem(i, "produtoId", e.target.value)}>
+                  <option value="">Produto...</option>
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} (est: {p.estoque})</option>)}
+                </select>
+                <input style={inp} type="number" placeholder="Qtd" value={it.quantidade} min={1} onChange={e => updEditItem(i, "quantidade", e.target.value)} />
+                <input style={inp} type="number" placeholder="R$" step=".01" value={it.preco} onChange={e => updEditItem(i, "preco", e.target.value)} />
+                <button style={{ background: "none", border: "none", color: "#e05a5a", cursor: "pointer", padding: "0 4px" }} onClick={() => remEditItem(i)}><Icon name="x" size={16} /></button>
+              </div>
+            ))}
+          </div>
+          <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1rem 1.25rem", marginTop: ".5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem" }}>
+              <span style={{ fontSize: ".82rem", color: "#666" }}>Subtotal</span>
+              <span style={{ fontSize: ".95rem", color: "#aaa", fontFamily: "'DM Mono',monospace" }}>{fmt(editSubtotal)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem", gap: "1rem" }}>
+              <span style={{ fontSize: ".82rem", color: "#666", whiteSpace: "nowrap" }}>% Desconto</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {[5, 10, 15, 20].map(pct => (
+                  <button key={pct} onClick={() => setEditForm({ ...editForm, desconto: editForm.desconto == pct ? "" : String(pct) })}
+                    style={{ padding: "3px 9px", borderRadius: 5, border: "1px solid", borderColor: Number(editForm.desconto) === pct ? "#e8a020" : "#2a2a2a", background: Number(editForm.desconto) === pct ? "#e8a02022" : "transparent", color: Number(editForm.desconto) === pct ? "#e8a020" : "#555", cursor: "pointer", fontSize: ".72rem", fontFamily: "'DM Mono',monospace" }}>
+                    {pct}%
+                  </button>
+                ))}
+                <div style={{ position: "relative", width: 80 }}>
+                  <input style={{ ...inp, paddingRight: 24, textAlign: "right", width: "100%", fontFamily: "'DM Mono',monospace" }}
+                    type="number" min="0" max="100" step="0.5" placeholder="0" value={editForm.desconto}
+                    onChange={e => setEditForm({ ...editForm, desconto: e.target.value })} />
+                  <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#555", fontSize: ".8rem", pointerEvents: "none" }}>%</span>
+                </div>
+              </div>
+            </div>
+            {editDescPct > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem", padding: "6px 10px", background: "#1f1a09", borderRadius: 6, border: "1px solid #5a3a0a" }}>
+                <span style={{ fontSize: ".78rem", color: "#e8a020" }}>Desconto de {editDescPct}%</span>
+                <span style={{ fontSize: ".88rem", color: "#e8a020", fontFamily: "'DM Mono',monospace" }}>− {fmt(editValorDesconto)}</span>
+              </div>
+            )}
+            <div style={{ borderTop: "1px solid #2a2a2a", marginBottom: ".75rem" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: ".88rem", color: "#999", fontWeight: 600 }}>Total da Venda</span>
+              <div style={{ textAlign: "right" }}>
+                {editDescPct > 0 && <div style={{ fontSize: ".75rem", color: "#444", textDecoration: "line-through", fontFamily: "'DM Mono',monospace", marginBottom: 2 }}>{fmt(editSubtotal)}</div>}
+                <span style={{ color: "#ffbf00", fontWeight: 700, fontSize: "1.2rem", fontFamily: "'DM Mono',monospace" }}>{fmt(editTotal)}</span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: "1rem" }}>
+            <button style={btn("ghost")} onClick={() => { setModalEditar(false); setEditVenda(null); }}>Cancelar</button>
+            <button style={btn("primary")} onClick={salvarEdicao} disabled={saving}>{saving ? <><Spinner size={14} color="#0a0a08" /> Salvando...</> : "Salvar Alterações"}</button>
           </div>
         </Modal>
       )}
