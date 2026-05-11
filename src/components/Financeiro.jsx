@@ -12,12 +12,10 @@ const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPag
   const qtdReceberVencidas = contasReceber.filter(cr => cr.status !== "pago" && cr.data_vencimento < today()).length;
   const qtdPagarVencidas = contasPagar.filter(cp => cp.status !== "pago" && cp.data_vencimento < today()).length;
 
-  const fiadoIds = new Set((vendas || []).filter(v => v.forma_pagamento === "fiado").map(v => v.id));
-  const totalRecebido = (vendas || []).filter(v => v.status !== "cancelado" && v.forma_pagamento !== "fiado").reduce((a, v) => a + Number(v.total), 0)
-    + contasReceber.filter(cr => fiadoIds.has(cr.venda_id) && cr.status === "pago").reduce((a, cr) => a + Number(cr.valor), 0);
+  const totalVendas = (vendas || []).filter(v => v.status !== "cancelado").reduce((a, v) => a + Number(v.total), 0);
   const totalFornecedores = contasPagar.filter(cp => cp.status === "pago").reduce((a, c) => a + Number(c.valor), 0);
   const totalDespesas = (despesas || []).reduce((a, d) => a + Number(d.valor), 0);
-  const saldoCaixa = totalRecebido - totalFornecedores - totalDespesas;
+  const saldoCaixa = totalVendas - totalFornecedores - totalDespesas;
 
   const tabs = [
     { id: "receber", label: "A Receber", badge: qtdReceberVencidas },
@@ -35,7 +33,7 @@ const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPag
           <div style={{ fontSize: "1.75rem", fontWeight: 700, color: saldoCaixa >= 0 ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(saldoCaixa)}</div>
         </div>
         <div style={{ fontSize: ".75rem", color: "#444", textAlign: "right", lineHeight: 1.7 }}>
-          <div>Recebido: <span style={{ color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{fmt(totalRecebido)}</span></div>
+          <div>Vendas: <span style={{ color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{fmt(totalVendas)}</span></div>
           <div>Fornecedores: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt(totalFornecedores)}</span></div>
           <div>Despesas: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt(totalDespesas)}</span></div>
         </div>
