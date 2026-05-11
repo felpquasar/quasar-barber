@@ -221,6 +221,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   };
 
   const exportarPDF = () => {
+    const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     const fmtBRL = n => {
       const [int, dec] = Number(n).toFixed(2).split(".");
       return "R$ " + int.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + dec;
@@ -229,21 +230,21 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
     const rows = lista.map(v => {
       const cli = clientes.find(c => c.id === v.cliente_id);
       return `<tr>
-        <td>#${String(v.id).slice(-4)}</td>
-        <td>${v.data || "—"}</td>
-        <td>${cli?.nome ?? "—"}</td>
-        <td style="text-align:center">${(v.venda_itens || []).length}</td>
-        <td style="text-align:right">${v.desconto_pct ? `-${v.desconto_pct}%` : "—"}</td>
+        <td>#${esc(String(v.id).slice(-4))}</td>
+        <td>${esc(v.data || "—")}</td>
+        <td>${esc(cli?.nome ?? "—")}</td>
+        <td style="text-align:center">${esc((v.venda_itens || []).length)}</td>
+        <td style="text-align:right">${v.desconto_pct ? `-${esc(v.desconto_pct)}%` : "—"}</td>
         <td style="text-align:right;font-weight:600">${fmtBRL(v.total)}</td>
-        <td style="text-align:center;color:${corStatus[v.status] || "#555"};font-weight:500">${v.status}</td>
+        <td style="text-align:center;color:${corStatus[v.status] || "#555"};font-weight:500">${esc(v.status)}</td>
       </tr>`;
     }).join("");
 
     const filtros = [
-      busca && `Cliente: "${busca}"`,
-      filtroStatus !== "todos" && `Status: ${filtroStatus}`,
-      dataIni && `De: ${dataIni}`,
-      dataFim && `Até: ${dataFim}`,
+      busca && `Cliente: "${esc(busca)}"`,
+      filtroStatus !== "todos" && `Status: ${esc(filtroStatus)}`,
+      dataIni && `De: ${esc(dataIni)}`,
+      dataFim && `Até: ${esc(dataFim)}`,
     ].filter(Boolean).join(" · ");
 
     const html = `<!DOCTYPE html>
