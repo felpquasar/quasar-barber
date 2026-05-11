@@ -47,12 +47,15 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
   const dp = (despesas || []).filter(fp);
   const totalDespesas = dp.reduce((a, d) => a + Number(d.valor), 0);
 
-  const saldoCaixa = useMemo(() => {
-    const entradas = vendas.filter(v => v.status !== "cancelado").reduce((a, v) => a + Number(v.total), 0);
+  const { saldoCaixa, entradasCaixa, saidasFornecedor, saidasDespesas } = useMemo(() => {
+    const fiadoIds = new Set(vendas.filter(v => v.forma_pagamento === "fiado").map(v => v.id));
+    const imediatas = vendas.filter(v => v.status !== "cancelado" && v.forma_pagamento !== "fiado").reduce((a, v) => a + Number(v.total), 0);
+    const fiadoPago = (contasReceber || []).filter(cr => fiadoIds.has(cr.venda_id) && cr.status === "pago").reduce((a, cr) => a + Number(cr.valor), 0);
+    const entradas = imediatas + fiadoPago;
     const saidasCP = (contasPagar || []).filter(cp => cp.status === "pago").reduce((a, c) => a + Number(c.valor), 0);
     const saidasDesp = (despesas || []).reduce((a, d) => a + Number(d.valor), 0);
-    return entradas - saidasCP - saidasDesp;
-  }, [vendas, contasPagar, despesas]);
+    return { saldoCaixa: entradas - saidasCP - saidasDesp, entradasCaixa: entradas, saidasFornecedor: saidasCP, saidasDespesas: saidasDesp };
+  }, [vendas, contasReceber, contasPagar, despesas]);
 
   const topProd = useMemo(() => {
     const m = {};
@@ -127,9 +130,9 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
           <div style={{ fontSize: "2rem", fontWeight: 700, color: saldoCaixa >= 0 ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(saldoCaixa)}</div>
         </div>
         <div style={{ fontSize: ".75rem", color: "#444", textAlign: "right", lineHeight: 1.7 }}>
-          <div>Vendas: <span style={{ color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{fmt(vendas.filter(v => v.status !== "cancelado").reduce((a, v) => a + Number(v.total), 0))}</span></div>
-          <div>Fornecedores: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt((contasPagar || []).filter(cp => cp.status === "pago").reduce((a, c) => a + Number(c.valor), 0))}</span></div>
-          <div>Despesas: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt((despesas || []).reduce((a, d) => a + Number(d.valor), 0))}</span></div>
+          <div>Recebido: <span style={{ color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{fmt(entradasCaixa)}</span></div>
+          <div>Fornecedores: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt(saidasFornecedor)}</span></div>
+          <div>Despesas: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt(saidasDespesas)}</span></div>
         </div>
       </div>
 
