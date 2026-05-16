@@ -20,7 +20,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   const [editVenda, setEditVenda] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30 });
+  const [form, setForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30, entrada: "" });
   const [itens, setItens] = useState([{ produtoId: "", quantidade: 1, preco: "" }]);
   const [editForm, setEditForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30 });
   const [editItens, setEditItens] = useState([]);
@@ -84,6 +84,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   const descPct = Math.min(Math.max(Number(form.desconto) || 0, 0), 100);
   const valorDesconto = subtotal * (descPct / 100);
   const total = subtotal - valorDesconto;
+  const saldoRestante = Math.max(0, total - Number(form.entrada || 0));
 
   const editSubtotal = editItens.reduce((a, it) => a + (Number(it.quantidade) || 0) * (Number(it.preco) || 0), 0);
   const editDescPct = Math.min(Math.max(Number(editForm.desconto) || 0, 0), 100);
@@ -91,7 +92,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   const editTotal = editSubtotal - editValorDesconto;
   const statusCor = { pago: "#4caf82", pendente: "#e8a020", cancelado: "#e05a5a" };
 
-  const abrirModal = () => { setForm({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30 }); setItens([{ produtoId: "", quantidade: 1, preco: "" }]); setModal(true); };
+  const abrirModal = () => { setForm({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30, entrada: "" }); setItens([{ produtoId: "", quantidade: 1, preco: "" }]); setModal(true); };
 
   const salvarVenda = async () => {
     if (!form.clienteId || itens.some(it => !it.produtoId || !it.quantidade || !it.preco)) { notify("Preencha todos os campos da venda.", "error"); return; }
@@ -101,6 +102,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
         cliente_id: Number(form.clienteId), data: form.data, status: form.status, total,
         desconto_pct: descPct > 0 ? descPct : null, desconto_valor: descPct > 0 ? valorDesconto : null,
         forma_pagamento: form.forma, prazo_dias: Number(form.prazo),
+        valor_entrada: Number(form.entrada || 0) > 0 ? Number(form.entrada) : null,
       }).select().single();
       if (ve) throw ve;
       const itensSalvar = itens.map(it => ({ venda_id: venda.id, produto_id: Number(it.produtoId), quantidade: Number(it.quantidade), preco: Number(it.preco) }));
@@ -113,13 +115,13 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
         setProdutos(prev => prev.map(p => p.id === prod.id ? { ...p, estoque: novoEstoque } : p));
         await supabase.from("movimentos").insert({ produto_id: prod.id, tipo: "saida", quantidade: Number(it.quantidade), data: form.data, obs: `Venda #${String(venda.id).slice(-4)}` });
       }
-      if (form.status === "pendente") {
+      if (form.status === "pendente" && saldoRestante > 0) {
         const vencimento = addDays(form.data, Number(form.prazo));
         const cli = clientes.find(c => c.id === Number(form.clienteId));
         const { data: cr } = await supabase.from("contas_receber").insert({
           venda_id: venda.id, cliente_id: Number(form.clienteId),
           descricao: `Venda #${String(venda.id).slice(-4)}${cli ? ` — ${cli.nome}` : ""}`,
-          valor: total, forma_pagamento: form.forma,
+          valor: saldoRestante, forma_pagamento: form.forma,
           data_emissao: form.data, data_vencimento: vencimento, status: "pendente",
         }).select().single();
         if (cr) setContasReceber(prev => [...prev, cr].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)));
@@ -528,6 +530,30 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
                 <span style={{ color: "#ffbf00", fontWeight: 700, fontSize: "1.2rem", fontFamily: "'DM Mono',monospace" }}>{fmt(total)}</span>
               </div>
             </div>
+            {total > 0 && (
+              <div style={{ borderTop: "1px solid #2a2a2a", marginTop: ".75rem", paddingTop: ".75rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+                  <span style={{ fontSize: ".82rem", color: "#666", whiteSpace: "nowrap" }}>Entrada (R$)</span>
+                  <div style={{ position: "relative", width: 140 }}>
+                    <input style={{ ...inp, fontFamily: "'DM Mono',monospace", textAlign: "right", width: "100%" }}
+                      type="number" step=".01" min="0" placeholder="0,00"
+                      value={form.entrada}
+                      onChange={e => setForm({ ...form, entrada: e.target.value })} />
+                  </div>
+                </div>
+                {form.status === "pendente" && Number(form.entrada) > 0 && saldoRestante > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, padding: "5px 8px", background: "#0d1a14", borderRadius: 6, border: "1px solid #1a4a2a" }}>
+                    <span style={{ fontSize: ".75rem", color: "#4caf82" }}>Saldo a receber</span>
+                    <span style={{ fontSize: ".88rem", color: "#4caf82", fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{fmt(saldoRestante)}</span>
+                  </div>
+                )}
+                {form.status === "pendente" && Number(form.entrada) >= total && total > 0 && (
+                  <div style={{ marginTop: 6, padding: "5px 8px", background: "#0d1a14", borderRadius: 6, border: "1px solid #1a4a2a", fontSize: ".75rem", color: "#4caf82" }}>
+                    Entrada cobre o total — nenhuma conta a receber será criada
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: "1rem" }}>
             <button style={btn("ghost")} onClick={() => setModal(false)}>Cancelar</button>

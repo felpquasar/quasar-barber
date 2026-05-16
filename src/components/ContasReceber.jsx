@@ -24,6 +24,8 @@ const statusReal = (cr) => {
 const diasAtraso = (vencimento) =>
   Math.floor((new Date(today() + "T12:00:00") - new Date(vencimento + "T12:00:00")) / 86400000);
 
+const saldoCr = (cr) => Math.max(0, Number(cr.valor) - Number(cr.valor_pago || 0));
+
 const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) => {
   const isMobile = useMobile();
   const [filtro, setFiltro] = useState("todos");
@@ -32,7 +34,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
   const [modalEditar, setModalEditar] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ clienteId: "", descricao: "", valor: "", forma: "fiado", vencimento: today(), obs: "" });
-  const [pagarForm, setPagarForm] = useState({ forma: "pix", data: today() });
+  const [pagarForm, setPagarForm] = useState({ forma: "pix", data: today(), valorParcial: "" });
   const [editForm, setEditForm] = useState({});
   const [ordenarPor, setOrdenarPor] = useState("vencimento");
   const [ordenarDir, setOrdenarDir] = useState("asc");
@@ -65,8 +67,8 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
   const totais = useMemo(() => {
     const mapeado = contasReceber.map(cr => ({ ...cr, _status: statusReal(cr) }));
     return {
-      pendente: mapeado.filter(cr => cr._status === "pendente").reduce((a, c) => a + Number(c.valor), 0),
-      vencido: mapeado.filter(cr => cr._status === "vencido").reduce((a, c) => a + Number(c.valor), 0),
+      pendente: mapeado.filter(cr => cr._status === "pendente").reduce((a, c) => a + saldoCr(c), 0),
+      vencido: mapeado.filter(cr => cr._status === "vencido").reduce((a, c) => a + saldoCr(c), 0),
       pago: mapeado.filter(cr => cr._status === "pago").reduce((a, c) => a + Number(c.valor), 0),
       qtdVencido: mapeado.filter(cr => cr._status === "vencido").length,
     };
@@ -96,15 +98,22 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
 
   const confirmarPagamento = async () => {
     if (!modalPagar) return;
+    const saldo = saldoCr(modalPagar);
+    const valorRecebido = pagarForm.valorParcial ? Math.min(Number(pagarForm.valorParcial), saldo) : saldo;
+    if (valorRecebido <= 0) { notify("Informe o valor recebido.", "error"); return; }
     setSaving(true);
     try {
+      const novoPago = Number(modalPagar.valor_pago || 0) + valorRecebido;
+      const pagoTotal = novoPago >= Number(modalPagar.valor);
+      const updates = { valor_pago: novoPago, forma_pagamento: pagarForm.forma };
+      if (pagoTotal) { updates.status = "pago"; updates.data_pagamento = pagarForm.data; }
       const { data, error } = await supabase.from("contas_receber")
-        .update({ status: "pago", data_pagamento: pagarForm.data, forma_pagamento: pagarForm.forma })
+        .update(updates)
         .eq("id", modalPagar.id).select().single();
       if (error) { console.error("contas_receber update:", error); notify(`Erro ao registrar pagamento: ${error.message}`, "error"); return; }
       setContasReceber(prev => prev.map(cr => cr.id === modalPagar.id ? data : cr));
       setModalPagar(null);
-      notify("Pagamento registrado!");
+      notify(pagoTotal ? "Pagamento total registrado!" : `Parcial de ${fmt(valorRecebido)} registrado. Saldo: ${fmt(saldo - valorRecebido)}`);
     } finally { setSaving(false); }
   };
 
@@ -236,7 +245,14 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
                     {atraso > 0 && <div style={{ fontSize: ".7rem", color: "#e05a5a", marginTop: 2 }}>{atraso} dia{atraso > 1 ? "s" : ""} atraso</div>}
                     {cr._status === "pago" && cr.data_pagamento && <div style={{ fontSize: ".7rem", color: "#4caf82", marginTop: 2 }}>Pago em {cr.data_pagamento}</div>}
                   </td>
-                  <td style={{ padding: ".8rem 1rem", color: "#ffbf00", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{fmt(cr.valor)}</td>
+                  <td style={{ padding: ".8rem 1rem" }}>
+                    <div style={{ color: "#ffbf00", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>
+                      {cr._status === "pago" ? fmt(cr.valor) : fmt(saldoCr(cr))}
+                    </div>
+                    {cr._status !== "pago" && Number(cr.valor_pago || 0) > 0 && (
+                      <div style={{ fontSize: ".7rem", color: "#4caf82", marginTop: 2 }}>+{fmt(cr.valor_pago)} pago</div>
+                    )}
+                  </td>
                   <td style={{ padding: ".8rem 1rem" }}>
                     <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 20, background: STATUS_COR[cr._status] + "22", color: STATUS_COR[cr._status] }}>
                       {STATUS_LABEL[cr._status]}
@@ -247,7 +263,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
                       {cr._status !== "pago" && (
                         <>
                           <button
-                            onClick={() => { setModalPagar(cr); setPagarForm({ forma: cr.forma_pagamento || "pix", data: today() }); }}
+                            onClick={() => { setModalPagar(cr); setPagarForm({ forma: cr.forma_pagamento || "pix", data: today(), valorParcial: "" }); }}
                             style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#4caf8222", color: "#4caf82", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }}>
                             <Icon name="check" size={13} /> Receber
                           </button>
@@ -367,38 +383,74 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
       )}
 
       {/* Modal confirmar recebimento */}
-      {modalPagar && (
-        <Modal title="Registrar Recebimento" onClose={() => setModalPagar(null)}>
-          <div style={{ background: "#111", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
-            <div style={{ fontSize: ".72rem", color: "#555", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>Cliente</div>
-            <div style={{ fontSize: "1rem", color: "#e0e0e0", fontWeight: 600 }}>{clientes.find(c => c.id === modalPagar.cliente_id)?.nome}</div>
-            {modalPagar.descricao && <div style={{ fontSize: ".82rem", color: "#666", marginTop: 3 }}>{modalPagar.descricao}</div>}
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#ffbf00", fontFamily: "'DM Mono',monospace", marginTop: 8 }}>{fmt(modalPagar.valor)}</div>
-          </div>
-          <Field label="Forma de Pagamento Recebida">
-            <div style={{ display: "flex", gap: 6 }}>
-              {FORMAS.map(f => (
-                <button key={f} onClick={() => setPagarForm({ ...pagarForm, forma: f })}
-                  style={{ flex: 1, padding: "7px 0", borderRadius: 6, border: `1px solid ${pagarForm.forma === f ? FORMA_COR[f] : "#333"}`, cursor: "pointer",
-                    background: pagarForm.forma === f ? FORMA_COR[f] + "22" : "transparent",
-                    color: pagarForm.forma === f ? FORMA_COR[f] : "#666",
-                    fontSize: ".78rem", fontWeight: pagarForm.forma === f ? 700 : 400 }}>
-                  {FORMA_LABEL[f]}
-                </button>
-              ))}
+      {modalPagar && (() => {
+        const saldo = saldoCr(modalPagar);
+        const valorDigitado = pagarForm.valorParcial ? Number(pagarForm.valorParcial) : 0;
+        const saldoApos = Math.max(0, saldo - valorDigitado);
+        const isParcial = pagarForm.valorParcial !== "" && valorDigitado < saldo;
+        return (
+          <Modal title="Registrar Recebimento" onClose={() => setModalPagar(null)}>
+            <div style={{ background: "#111", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
+              <div style={{ fontSize: ".72rem", color: "#555", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>Cliente</div>
+              <div style={{ fontSize: "1rem", color: "#e0e0e0", fontWeight: 600 }}>{clientes.find(c => c.id === modalPagar.cliente_id)?.nome}</div>
+              {modalPagar.descricao && <div style={{ fontSize: ".82rem", color: "#666", marginTop: 3 }}>{modalPagar.descricao}</div>}
+              <div style={{ display: "flex", gap: 20, marginTop: 12, flexWrap: "wrap" }}>
+                {Number(modalPagar.valor_pago || 0) > 0 && (
+                  <div>
+                    <div style={{ fontSize: ".68rem", color: "#555", marginBottom: 2 }}>Total</div>
+                    <div style={{ fontSize: "1rem", color: "#666", fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{fmt(modalPagar.valor)}</div>
+                  </div>
+                )}
+                {Number(modalPagar.valor_pago || 0) > 0 && (
+                  <div>
+                    <div style={{ fontSize: ".68rem", color: "#555", marginBottom: 2 }}>Já pago</div>
+                    <div style={{ fontSize: "1rem", color: "#4caf82", fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{fmt(modalPagar.valor_pago)}</div>
+                  </div>
+                )}
+                <div>
+                  <div style={{ fontSize: ".68rem", color: "#555", marginBottom: 2 }}>{Number(modalPagar.valor_pago || 0) > 0 ? "Saldo" : "Valor"}</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#ffbf00", fontFamily: "'DM Mono',monospace" }}>{fmt(saldo)}</div>
+                </div>
+              </div>
             </div>
-          </Field>
-          <Field label="Data do Recebimento">
-            <input style={inp} type="date" value={pagarForm.data} onChange={e => setPagarForm({ ...pagarForm, data: e.target.value })} />
-          </Field>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
-            <button style={btn("ghost")} onClick={() => setModalPagar(null)}>Cancelar</button>
-            <button style={btn("primary")} onClick={confirmarPagamento} disabled={saving}>
-              {saving ? <><Spinner size={14} color="#0a0a08" /> Confirmando...</> : "Confirmar Recebimento"}
-            </button>
-          </div>
-        </Modal>
-      )}
+            <Field label="Valor Recebido (R$)">
+              <input style={{ ...inp, fontFamily: "'DM Mono',monospace" }}
+                type="number" step=".01" min="0"
+                placeholder={String(saldo.toFixed(2))}
+                value={pagarForm.valorParcial}
+                onChange={e => setPagarForm({ ...pagarForm, valorParcial: e.target.value })} />
+              {isParcial && (
+                <div style={{ marginTop: 6, padding: "5px 8px", background: "#1f1a09", borderRadius: 6, border: "1px solid #5a3a0a", display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: ".75rem", color: "#e8a020" }}>Pagamento parcial — saldo restante</span>
+                  <span style={{ fontSize: ".82rem", color: "#e8a020", fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{fmt(saldoApos)}</span>
+                </div>
+              )}
+            </Field>
+            <Field label="Forma de Pagamento Recebida">
+              <div style={{ display: "flex", gap: 6 }}>
+                {FORMAS.map(f => (
+                  <button key={f} onClick={() => setPagarForm({ ...pagarForm, forma: f })}
+                    style={{ flex: 1, padding: "7px 0", borderRadius: 6, border: `1px solid ${pagarForm.forma === f ? FORMA_COR[f] : "#333"}`, cursor: "pointer",
+                      background: pagarForm.forma === f ? FORMA_COR[f] + "22" : "transparent",
+                      color: pagarForm.forma === f ? FORMA_COR[f] : "#666",
+                      fontSize: ".78rem", fontWeight: pagarForm.forma === f ? 700 : 400 }}>
+                    {FORMA_LABEL[f]}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Data do Recebimento">
+              <input style={inp} type="date" value={pagarForm.data} onChange={e => setPagarForm({ ...pagarForm, data: e.target.value })} />
+            </Field>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+              <button style={btn("ghost")} onClick={() => setModalPagar(null)}>Cancelar</button>
+              <button style={btn("primary")} onClick={confirmarPagamento} disabled={saving}>
+                {saving ? <><Spinner size={14} color="#0a0a08" /> Confirmando...</> : isParcial ? "Registrar Parcial" : "Confirmar Recebimento"}
+              </button>
+            </div>
+          </Modal>
+        );
+      })()}
     </div>
   );
 };
