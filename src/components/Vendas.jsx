@@ -84,7 +84,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   const descPct = Math.min(Math.max(Number(form.desconto) || 0, 0), 100);
   const valorDesconto = subtotal * (descPct / 100);
   const total = subtotal - valorDesconto;
-  const saldoRestante = Math.max(0, total - Number(form.entrada || 0));
+  const saldoRestante = form.forma === "fiado" ? Math.max(0, total - Number(form.entrada || 0)) : 0;
 
   const editSubtotal = editItens.reduce((a, it) => a + (Number(it.quantidade) || 0) * (Number(it.preco) || 0), 0);
   const editDescPct = Math.min(Math.max(Number(editForm.desconto) || 0, 0), 100);
@@ -102,7 +102,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
         cliente_id: Number(form.clienteId), data: form.data, status: form.status, total,
         desconto_pct: descPct > 0 ? descPct : null, desconto_valor: descPct > 0 ? valorDesconto : null,
         forma_pagamento: form.forma, prazo_dias: Number(form.prazo),
-        valor_entrada: Number(form.entrada || 0) > 0 ? Number(form.entrada) : null,
+        valor_entrada: form.forma === "fiado" ? Number(form.entrada || 0) : 0,
       }).select().single();
       if (ve) throw ve;
       const itensSalvar = itens.map(it => ({ venda_id: venda.id, produto_id: Number(it.produtoId), quantidade: Number(it.quantidade), preco: Number(it.preco) }));
@@ -128,7 +128,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
       }
       setVendas(prev => [{ ...venda, venda_itens: itensSalvar }, ...prev]);
       setModal(false); notify("Venda registrada!");
-    } catch (err) { console.error(err); notify("Erro ao salvar venda.", "error"); }
+    } catch (err) { console.error(err); notify(err?.message || err?.details || "Erro ao salvar venda.", "error"); }
     finally { setSaving(false); }
   };
 
@@ -435,7 +435,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
               </div>
             </Field>
             <Field label="Forma de Pagamento">
-              <select style={inp} value={form.forma} onChange={e => setForm({ ...form, forma: e.target.value })}>
+              <select style={inp} value={form.forma} onChange={e => setForm({ ...form, forma: e.target.value, entrada: e.target.value !== "fiado" ? "" : form.entrada })}>
                 {FORMAS.map(f => <option key={f} value={f}>{FORMA_LABEL[f]}</option>)}
               </select>
             </Field>
@@ -530,7 +530,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
                 <span style={{ color: "#ffbf00", fontWeight: 700, fontSize: "1.2rem", fontFamily: "'DM Mono',monospace" }}>{fmt(total)}</span>
               </div>
             </div>
-            {total > 0 && (
+            {form.forma === "fiado" && total > 0 && (
               <div style={{ borderTop: "1px solid #2a2a2a", marginTop: ".75rem", paddingTop: ".75rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
                   <span style={{ fontSize: ".82rem", color: "#666", whiteSpace: "nowrap" }}>Entrada (R$)</span>
