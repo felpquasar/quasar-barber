@@ -18,6 +18,9 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
   const [modalProd, setModalProd] = useState(false);
   const [modalMov, setModalMov] = useState(null);
   const [modalEdit, setModalEdit] = useState(null);
+  const [modalHistorico, setModalHistorico] = useState(null);
+  const [historico, setHistorico] = useState([]);
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [saving, setSaving] = useState(false);
   const [filtro, setFiltro] = useState("");
   const [ordenarPor, setOrdenarPor] = useState("nome");
@@ -30,11 +33,26 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
   const calcLucro = (custo, preco) => { const c = Number(custo), p = Number(preco); if (!c || !p || p <= c) return ""; return (((p - c) / c) * 100).toFixed(1); };
   const abrirEdicao = (p) => { const lucro = calcLucro(p.custo, p.preco); setEditForm({ nome: p.nome, categoria: p.categoria || "", unidade: p.unidade || "un", custo: p.custo, lucro, preco: p.preco }); setModalEdit(p); };
 
+  const abrirHistorico = async (p) => {
+    setModalHistorico(p);
+    setLoadingHistorico(true);
+    const { data } = await supabase.from("historico_precos").select("*").eq("produto_id", p.id).order("created_at", { ascending: false }).limit(50);
+    setHistorico(data || []);
+    setLoadingHistorico(false);
+  };
+
   const salvarEdicao = async () => {
     if (!editForm.nome || !modalEdit) return; setSaving(true);
-    const { data, error } = await supabase.from("produtos").update({ nome: editForm.nome.trim(), categoria: editForm.categoria, unidade: editForm.unidade, custo: Number(editForm.custo), preco: Number(editForm.preco) }).eq("id", modalEdit.id).select().single();
+    const custoAnterior = Number(modalEdit.custo);
+    const precoAnterior = Number(modalEdit.preco);
+    const custoNovo = Number(editForm.custo);
+    const precoNovo = Number(editForm.preco);
+    const { data, error } = await supabase.from("produtos").update({ nome: editForm.nome.trim(), categoria: editForm.categoria, unidade: editForm.unidade, custo: custoNovo, preco: precoNovo }).eq("id", modalEdit.id).select().single();
+    if (error) { setSaving(false); notify("Erro ao editar produto", "error"); return; }
+    if (custoAnterior !== custoNovo || precoAnterior !== precoNovo) {
+      await supabase.from("historico_precos").insert({ produto_id: modalEdit.id, custo_anterior: custoAnterior, custo_novo: custoNovo, preco_anterior: precoAnterior, preco_novo: precoNovo });
+    }
     setSaving(false);
-    if (error) { notify("Erro ao editar produto", "error"); return; }
     setProdutos(prev => prev.map(p => p.id === modalEdit.id ? data : p).sort((a, b) => a.nome.localeCompare(b.nome)));
     setModalEdit(null); notify("Produto atualizado!");
   };
@@ -174,6 +192,7 @@ td{padding:6px 10px;border-bottom:1px solid #eee}@media print{body{padding:0}}</
                       <div style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => abrirEdicao(p)} style={{ ...btn("ghost"), padding: "5px 10px", fontSize: ".75rem" }}><Icon name="pencil" size={13} /></button>
                         <button onClick={() => setModalMov(p)} style={{ ...btn("ghost"), padding: "5px 10px", fontSize: ".75rem" }}><Icon name="history" size={13} /> Movimentar</button>
+                        <button onClick={() => abrirHistorico(p)} style={{ ...btn("ghost"), padding: "5px 10px", fontSize: ".75rem" }} title="Histórico de preços"><Icon name="chart" size={13} /></button>
                         <button onClick={() => excluir(p.id)} style={{ ...btn("danger"), padding: "5px 10px", fontSize: ".75rem" }}><Icon name="trash" size={13} /></button>
                       </div>
                     </td>
@@ -246,6 +265,37 @@ td{padding:6px 10px;border-bottom:1px solid #eee}@media print{body{padding:0}}</
                 <button style={btn("ghost")} onClick={() => setModalMov(null)}>Cancelar</button>
                 <button style={btn("primary")} onClick={lancarMovimento} disabled={saving}>{saving ? <><Spinner size={14} color="#0a0a08" /> Salvando...</> : "Confirmar"}</button>
               </div>
+            </Modal>
+          )}
+
+          {modalHistorico && (
+            <Modal title={`Histórico de Preços — ${modalHistorico.nome}`} onClose={() => { setModalHistorico(null); setHistorico([]); }}>
+              {loadingHistorico ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}><Spinner size={24} /></div>
+              ) : historico.length === 0 ? (
+                <div style={{ textAlign: "center", color: "#555", padding: "2rem", fontSize: ".88rem" }}>Nenhuma alteração de preço registrada.</div>
+              ) : (
+                <div style={{ overflow: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".85rem" }}>
+                    <thead><tr style={{ background: "#111" }}>
+                      {["Data", "Custo Anterior", "Custo Novo", "Preço Anterior", "Preço Novo"].map(h => (
+                        <th key={h} style={{ padding: ".6rem .9rem", textAlign: h === "Data" ? "left" : "right", fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {historico.map((h, i) => (
+                        <tr key={i} style={{ borderTop: "1px solid #1f1f1f" }}>
+                          <td style={{ padding: ".7rem .9rem", color: "#888", fontFamily: "'DM Mono',monospace", fontSize: ".8rem" }}>{new Date(h.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+                          <td style={{ padding: ".7rem .9rem", textAlign: "right", fontFamily: "'DM Mono',monospace", color: "#aaa" }}>{fmt(h.custo_anterior)}</td>
+                          <td style={{ padding: ".7rem .9rem", textAlign: "right", fontFamily: "'DM Mono',monospace", color: Number(h.custo_novo) > Number(h.custo_anterior) ? "#e05a5a" : "#4caf82", fontWeight: 600 }}>{fmt(h.custo_novo)}</td>
+                          <td style={{ padding: ".7rem .9rem", textAlign: "right", fontFamily: "'DM Mono',monospace", color: "#aaa" }}>{fmt(h.preco_anterior)}</td>
+                          <td style={{ padding: ".7rem .9rem", textAlign: "right", fontFamily: "'DM Mono',monospace", color: Number(h.preco_novo) > Number(h.preco_anterior) ? "#4caf82" : "#e05a5a", fontWeight: 600 }}>{fmt(h.preco_novo)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </Modal>
           )}
 

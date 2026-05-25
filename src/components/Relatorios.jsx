@@ -2,6 +2,7 @@ import { useState } from 'react';
 import RelatorioDRE from './RelatorioDRE';
 import RelatorioVendas from './RelatorioVendas';
 import RelatorioInadimplencia from './RelatorioInadimplencia';
+import RelatorioMargem from './RelatorioMargem';
 
 const Relatorios = ({ vendas, clientes, produtos, contasReceber, contasPagar }) => {
   const [aba, setAba] = useState("dre");
@@ -10,6 +11,7 @@ const Relatorios = ({ vendas, clientes, produtos, contasReceber, contasPagar }) 
     { id: "dre", label: "DRE" },
     { id: "vendas", label: "Análise de Vendas" },
     { id: "inadimplencia", label: "Inadimplência" },
+    { id: "margem", label: "Margem por Produto" },
   ];
 
   return (
@@ -26,6 +28,7 @@ const Relatorios = ({ vendas, clientes, produtos, contasReceber, contasPagar }) 
       {aba === "dre" && <RelatorioDRE contasReceber={contasReceber} contasPagar={contasPagar} />}
       {aba === "vendas" && <RelatorioVendas vendas={vendas} clientes={clientes} />}
       {aba === "inadimplencia" && <RelatorioInadimplencia contasReceber={contasReceber} clientes={clientes} />}
+      {aba === "margem" && <RelatorioMargem vendas={vendas} produtos={produtos} />}
     </div>
   );
 };
