@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
 import { inp, btn } from '../styles/shared';

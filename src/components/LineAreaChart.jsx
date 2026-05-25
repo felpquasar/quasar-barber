@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { fmt } from "../lib/utils";
 
 const LineAreaChart = ({ dados }) => {

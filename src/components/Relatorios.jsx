@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import RelatorioDRE from './RelatorioDRE';
 import RelatorioVendas from './RelatorioVendas';
 import RelatorioInadimplencia from './RelatorioInadimplencia';

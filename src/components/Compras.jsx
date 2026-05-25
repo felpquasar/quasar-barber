@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import EmptyState from './ui/EmptyState';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
@@ -37,11 +37,12 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
   const nomeProd = id => produtos.find(p => p.id === id)?.nome ?? "—";
 
   const lista = useMemo(() => {
+    const getForn = id => fornecedores.find(f => f.id === id)?.nome ?? "—";
     const base = filtroStatus === "todos" ? pedidosCompra : pedidosCompra.filter(p => p.status === filtroStatus);
     return [...base].sort((a, b) => {
       let va, vb;
       if (ordenarPor === "data_pedido") { va = a.data_pedido; vb = b.data_pedido; }
-      else if (ordenarPor === "fornecedor") { va = nomeForn(a.fornecedor_id).toLowerCase(); vb = nomeForn(b.fornecedor_id).toLowerCase(); }
+      else if (ordenarPor === "fornecedor") { va = getForn(a.fornecedor_id).toLowerCase(); vb = getForn(b.fornecedor_id).toLowerCase(); }
       else if (ordenarPor === "total") { va = Number(a.total); vb = Number(b.total); }
       else if (ordenarPor === "status") { va = a.status; vb = b.status; }
       if (va < vb) return ordenarDir === "asc" ? -1 : 1;

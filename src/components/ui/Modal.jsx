@@ -1,4 +1,4 @@
-﻿import { useMobile } from "../../hooks/useMobile";
+import { useMobile } from "../../hooks/useMobile";
 import Icon from "./Icon";
 
 const Modal = ({ title, onClose, children, wide = false }) => {

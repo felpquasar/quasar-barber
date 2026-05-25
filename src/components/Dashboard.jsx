@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { fmt, today } from '../lib/utils';
 import Icon from './ui/Icon';
 import LineAreaChart from './LineAreaChart';
@@ -99,9 +99,9 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
       });
       return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0])).map(([mes, x]) => ({ label: mes.slice(5), valor: x.valor, qtd: x.qtd }));
     }
-  }, [vp, periodo, mesAtual]);
+  }, [vp, periodo]);
 
-  const maxP = topProd[0]?.qty || 1, maxC = topCli[0]?.total || 1;
+  const maxP = topProd[0]?.qty || 1;
   const labelPeriodo = periodo === "mes" ? "do Mês" : periodo === "semana" ? "da Semana" : "do Trimestre";
 
   return (

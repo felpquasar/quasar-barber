@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { inp } from "../styles/shared";
 import Icon from "./ui/Icon";

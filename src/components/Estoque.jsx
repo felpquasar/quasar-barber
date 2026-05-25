@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import EmptyState from './ui/EmptyState';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
@@ -229,7 +229,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   };
 
   const marcarPago = async (v) => {
-    const { data, error } = await supabase.from("vendas").update({ status: "pago" }).eq("id", v.id).select().single();
+    const { error } = await supabase.from("vendas").update({ status: "pago" }).eq("id", v.id).select().single();
     if (error) { notify("Erro ao atualizar.", "error"); return; }
     setVendas(prev => prev.map(x => x.id === v.id ? { ...x, status: "pago" } : x));
     const { data: cr } = await supabase.from("contas_receber")
@@ -503,7 +503,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
               <span style={{ fontSize: ".82rem", color: "#666", whiteSpace: "nowrap" }}>% Desconto</span>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {[5, 10, 15, 20].map(pct => (
-                  <button key={pct} onClick={() => setForm({ ...form, desconto: form.desconto == pct ? "" : String(pct) })}
+                  <button key={pct} onClick={() => setForm({ ...form, desconto: Number(form.desconto) === pct ? "" : String(pct) })}
                     style={{ padding: "3px 9px", borderRadius: 5, border: "1px solid", borderColor: Number(form.desconto) === pct ? "#e8a020" : "#2a2a2a", background: Number(form.desconto) === pct ? "#e8a02022" : "transparent", color: Number(form.desconto) === pct ? "#e8a020" : "#555", cursor: "pointer", fontSize: ".72rem", fontFamily: "'DM Mono',monospace" }}>
                     {pct}%
                   </button>
@@ -635,7 +635,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
               <span style={{ fontSize: ".82rem", color: "#666", whiteSpace: "nowrap" }}>% Desconto</span>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {[5, 10, 15, 20].map(pct => (
-                  <button key={pct} onClick={() => setEditForm({ ...editForm, desconto: editForm.desconto == pct ? "" : String(pct) })}
+                  <button key={pct} onClick={() => setEditForm({ ...editForm, desconto: Number(editForm.desconto) === pct ? "" : String(pct) })}
                     style={{ padding: "3px 9px", borderRadius: 5, border: "1px solid", borderColor: Number(editForm.desconto) === pct ? "#e8a020" : "#2a2a2a", background: Number(editForm.desconto) === pct ? "#e8a02022" : "transparent", color: Number(editForm.desconto) === pct ? "#e8a020" : "#555", cursor: "pointer", fontSize: ".72rem", fontFamily: "'DM Mono',monospace" }}>
                     {pct}%
                   </button>

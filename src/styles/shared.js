@@ -1,4 +1,4 @@
-﻿export const inp = { width: "100%", background: "#111", border: "1px solid #333", borderRadius: 6, padding: "9px 12px", color: "#e0e0e0", fontSize: ".88rem", outline: "none", boxSizing: "border-box" };
+export const inp = { width: "100%", background: "#111", border: "1px solid #333", borderRadius: 6, padding: "9px 12px", color: "#e0e0e0", fontSize: ".88rem", outline: "none", boxSizing: "border-box" };
 
 export const btn = (v = "primary") => ({
   padding: "9px 20px", borderRadius: 6, border: "none", cursor: "pointer",
