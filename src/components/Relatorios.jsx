@@ -26,7 +26,7 @@ const Relatorios = ({ vendas, clientes, produtos, contasReceber, contasPagar }) 
       </div>
 
       {aba === "dre" && <RelatorioDRE contasReceber={contasReceber} contasPagar={contasPagar} />}
-      {aba === "vendas" && <RelatorioVendas vendas={vendas} clientes={clientes} />}
+      {aba === "vendas" && <RelatorioVendas vendas={vendas} clientes={clientes} produtos={produtos} />}
       {aba === "inadimplencia" && <RelatorioInadimplencia contasReceber={contasReceber} clientes={clientes} />}
       {aba === "margem" && <RelatorioMargem vendas={vendas} produtos={produtos} />}
     </div>

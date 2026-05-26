@@ -19,7 +19,7 @@ const exportCSV = (rows, filename) => {
   URL.revokeObjectURL(url);
 };
 
-const RelatorioVendas = ({ vendas, clientes }) => {
+const RelatorioVendas = ({ vendas, clientes, produtos }) => {
   const anoAtual = new Date().getFullYear();
   const [ano, setAno] = useState(anoAtual);
   const [mes, setMes] = useState("00");
@@ -74,10 +74,16 @@ const RelatorioVendas = ({ vendas, clientes }) => {
   }, [filtradas]);
 
   const handleCSV = () => {
-    exportCSV([
-      ["Cliente", "Pedidos", "Total (R$)", "% do Total", "Ticket Médio (R$)"],
-      ...topClientes.map(c => [c.nome, c.qtd, c.total.toFixed(2), c.pct.toFixed(1) + "%", (c.total / c.qtd).toFixed(2)]),
-    ], `Vendas_${ano}${mes !== "00" ? "_" + mes : ""}.csv`);
+    const rows = [["Pedido", "Data", "Cliente", "Produto", "Qtd", "Valor (R$)"]];
+    filtradas.forEach(v => {
+      const cliente = clientes.find(c => c.id === v.cliente_id)?.nome ?? "—";
+      const pedido = String(v.id).padStart(3, "0");
+      (v.venda_itens || []).forEach(it => {
+        const produto = produtos.find(p => p.id === it.produto_id)?.nome ?? "Produto removido";
+        rows.push([pedido, v.data, cliente, produto, it.quantidade, Number(it.preco).toFixed(2)]);
+      });
+    });
+    exportCSV(rows, `Pedidos_${ano}${mes !== "00" ? "_" + mes : ""}.csv`);
   };
 
   return (
