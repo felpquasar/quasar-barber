@@ -8,8 +8,8 @@ const MESES_OPT = [
   ["04", "Abril"], ["05", "Maio"], ["06", "Junho"], ["07", "Julho"],
   ["08", "Agosto"], ["09", "Setembro"], ["10", "Outubro"], ["11", "Novembro"], ["12", "Dezembro"],
 ];
-const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", fiado: "Fiado" };
-const FORMA_COR = { a_vista: "#4caf82", cartao: "#6b9fd4", pix: "#5cb8d4", fiado: "#e8a020" };
+const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", parcelado: "Parcelado" };
+const FORMA_COR = { a_vista: "#4caf82", cartao: "#6b9fd4", pix: "#5cb8d4", parcelado: "#e8a020" };
 
 const exportCSV = (rows, filename) => {
   const csv = rows.map(r => r.join(";")).join("\n");

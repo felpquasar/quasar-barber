@@ -7,10 +7,10 @@ import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Spinner from './ui/Spinner';
 
-const FORMAS_REC = ["a_vista", "cartao", "pix", "fiado"];
+const FORMAS_REC = ["a_vista", "cartao", "pix", "parcelado"];
 const FORMAS_PAG = ["a_vista", "cartao", "pix", "transferencia"];
-const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", fiado: "Fiado", transferencia: "Transferência" };
-const FORMA_COR = { a_vista: "#4caf82", cartao: "#6b9fd4", pix: "#5cb8d4", fiado: "#e8a020", transferencia: "#b86fcf" };
+const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", parcelado: "Parcelado", transferencia: "Transferência" };
+const FORMA_COR = { a_vista: "#4caf82", cartao: "#6b9fd4", pix: "#5cb8d4", parcelado: "#e8a020", transferencia: "#b86fcf" };
 const CATEGORIAS = ["estoque", "aluguel", "servicos", "impostos", "outros"];
 const CAT_LABEL = { estoque: "Estoque", aluguel: "Aluguel", servicos: "Serviços", impostos: "Impostos", outros: "Outros" };
 const CAT_COR = { estoque: "#ffbf00", aluguel: "#6b9fd4", servicos: "#5cb8d4", impostos: "#e05a5a", outros: "#888" };
@@ -29,7 +29,7 @@ const FluxoCaixa = ({ contasReceber, setContasReceber, contasPagar, setContasPag
       descricao: item.descricao || "",
       valor: String(item.valor),
       vencimento: item.data_vencimento || today(),
-      forma: item.forma_pagamento || (item.tipo === "receber" ? "fiado" : "a_vista"),
+      forma: item.forma_pagamento || (item.tipo === "receber" ? "parcelado" : "a_vista"),
       clienteId: item.cliente_id ? String(item.cliente_id) : "",
       fornecedorId: item.fornecedor_id ? String(item.fornecedor_id) : "",
       categoria: item.categoria || "outros",

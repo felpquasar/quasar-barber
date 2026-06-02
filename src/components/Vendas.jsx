@@ -9,8 +9,8 @@ import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Spinner from './ui/Spinner';
 
-const FORMAS = ["a_vista", "cartao", "pix", "fiado"];
-const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", fiado: "Fiado" };
+const FORMAS = ["a_vista", "cartao", "pix", "parcelado"];
+const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", parcelado: "Parcelado" };
 const PRAZOS = [{ label: "À Vista", dias: 0 }, { label: "30d", dias: 30 }, { label: "60d", dias: 60 }, { label: "90d", dias: 90 }];
 
 const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimentos, setContasReceber, notify }) => {
@@ -20,9 +20,9 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   const [editVenda, setEditVenda] = useState(null);
   const [detalhe, setDetalhe] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30, entrada: "" });
+  const [form, setForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "parcelado", prazo: 30, entrada: "" });
   const [itens, setItens] = useState([{ produtoId: "", quantidade: 1, preco: "" }]);
-  const [editForm, setEditForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30 });
+  const [editForm, setEditForm] = useState({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "parcelado", prazo: 30 });
   const [editItens, setEditItens] = useState([]);
 
   const [busca, setBusca] = useState("");
@@ -84,7 +84,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   const descPct = Math.min(Math.max(Number(form.desconto) || 0, 0), 100);
   const valorDesconto = subtotal * (descPct / 100);
   const total = subtotal - valorDesconto;
-  const saldoRestante = form.forma === "fiado" ? Math.max(0, total - Number(form.entrada || 0)) : 0;
+  const saldoRestante = form.forma === "parcelado" ? Math.max(0, total - Number(form.entrada || 0)) : 0;
 
   const editSubtotal = editItens.reduce((a, it) => a + (Number(it.quantidade) || 0) * (Number(it.preco) || 0), 0);
   const editDescPct = Math.min(Math.max(Number(editForm.desconto) || 0, 0), 100);
@@ -92,7 +92,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   const editTotal = editSubtotal - editValorDesconto;
   const statusCor = { pago: "#4caf82", pendente: "#e8a020", cancelado: "#e05a5a" };
 
-  const abrirModal = () => { setForm({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "fiado", prazo: 30, entrada: "" }); setItens([{ produtoId: "", quantidade: 1, preco: "" }]); setModal(true); };
+  const abrirModal = () => { setForm({ clienteId: "", data: today(), status: "pendente", desconto: "", forma: "parcelado", prazo: 30, entrada: "" }); setItens([{ produtoId: "", quantidade: 1, preco: "" }]); setModal(true); };
 
   const salvarVenda = async () => {
     if (!form.clienteId || itens.some(it => !it.produtoId || !it.quantidade || !it.preco)) { notify("Preencha todos os campos da venda.", "error"); return; }
@@ -102,7 +102,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
         cliente_id: Number(form.clienteId), data: form.data, status: form.status, total,
         desconto_pct: descPct > 0 ? descPct : null, desconto_valor: descPct > 0 ? valorDesconto : null,
         forma_pagamento: form.forma, prazo_dias: Number(form.prazo),
-        valor_entrada: form.forma === "fiado" ? Number(form.entrada || 0) : 0,
+        ...(form.forma === "parcelado" ? { valor_entrada: Number(form.entrada || 0) } : {}),
       }).select().single();
       if (ve) throw ve;
       const itensSalvar = itens.map(it => ({ venda_id: venda.id, produto_id: Number(it.produtoId), quantidade: Number(it.quantidade), preco: Number(it.preco) }));
@@ -139,7 +139,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
       data: v.data,
       status: v.status,
       desconto: v.desconto_pct ? String(v.desconto_pct) : "",
-      forma: v.forma_pagamento || "fiado",
+      forma: v.forma_pagamento || "parcelado",
       prazo: v.prazo_dias || 30,
     });
     setEditItens((v.venda_itens || []).map(it => ({
@@ -239,6 +239,41 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
     notify("Venda marcada como paga!");
   };
 
+  const exportarCSV = () => {
+    const esc = s => {
+      const v = String(s ?? "");
+      return v.includes(";") || v.includes('"') || v.includes("\n") ? `"${v.replace(/"/g, '""')}"` : v;
+    };
+    const rows = [["Pedido", "Data", "Cliente", "Produto", "Qtd", "Preco Unit (R$)", "Subtotal Item (R$)", "Desconto (%)", "Total Venda (R$)", "Status", "Forma Pagamento"]];
+    lista.forEach(v => {
+      const cliente = clientes.find(c => c.id === v.cliente_id)?.nome ?? "—";
+      const pedido = "#" + String(v.id).slice(-4);
+      const itensVenda = v.venda_itens || [];
+      if (itensVenda.length === 0) {
+        rows.push([pedido, v.data, cliente, "—", "", "", "", v.desconto_pct ?? "", Number(v.total).toFixed(2), v.status, v.forma_pagamento ?? ""]);
+      } else {
+        itensVenda.forEach((it, idx) => {
+          const produto = produtos.find(p => p.id === it.produto_id)?.nome ?? "Produto removido";
+          const subtotalItem = (Number(it.quantidade) * Number(it.preco)).toFixed(2);
+          rows.push([
+            pedido, v.data, cliente, produto,
+            it.quantidade, Number(it.preco).toFixed(2), subtotalItem,
+            idx === 0 ? (v.desconto_pct ?? "") : "",
+            idx === 0 ? Number(v.total).toFixed(2) : "",
+            idx === 0 ? v.status : "",
+            idx === 0 ? (v.forma_pagamento ?? "") : "",
+          ]);
+        });
+      }
+    });
+    const csv = rows.map(r => r.map(esc).join(";")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `Vendas_${today()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const exportarPDF = () => {
     const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     const fmtBRL = n => {
@@ -315,6 +350,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Vendas</h2>
         <div style={{ display: "flex", gap: 8 }}>
+          <button style={btn("ghost")} onClick={exportarCSV}><Icon name="download" size={14} /> CSV</button>
           <button style={btn("ghost")} onClick={exportarPDF}><Icon name="print" size={14} /> Exportar PDF</button>
           <button style={btn("primary")} onClick={abrirModal}><Icon name="plus" size={14} /> Nova Venda</button>
         </div>
@@ -334,9 +370,11 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
             </button>
           ))}
         </div>
-        <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} style={{ ...inp, width: 130 }} title="Data inicial" />
-        <span style={{ color: "#444", fontSize: ".82rem" }}>–</span>
-        <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={{ ...inp, width: 130 }} title="Data final" />
+        <div style={{ display: "flex", gap: 6, alignItems: "center", ...(isMobile ? { width: "100%" } : {}) }}>
+          <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} style={{ ...inp, ...(isMobile ? { flex: 1 } : { width: 130 }) }} title="Data inicial" />
+          <span style={{ color: "#444", fontSize: ".82rem", flexShrink: 0 }}>–</span>
+          <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={{ ...inp, ...(isMobile ? { flex: 1 } : { width: 130 }) }} title="Data final" />
+        </div>
         {temFiltro && (
           <button onClick={() => { setBusca(""); setFiltroStatus("todos"); setDataIni(""); setDataFim(""); }}
             style={{ ...btn("ghost"), padding: "6px 10px", fontSize: ".75rem" }}>
@@ -435,7 +473,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
               </div>
             </Field>
             <Field label="Forma de Pagamento">
-              <select style={inp} value={form.forma} onChange={e => setForm({ ...form, forma: e.target.value, entrada: e.target.value !== "fiado" ? "" : form.entrada })}>
+              <select style={inp} value={form.forma} onChange={e => setForm({ ...form, forma: e.target.value, entrada: e.target.value !== "parcelado" ? "" : form.entrada })}>
                 {FORMAS.map(f => <option key={f} value={f}>{FORMA_LABEL[f]}</option>)}
               </select>
             </Field>
@@ -530,7 +568,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
                 <span style={{ color: "#ffbf00", fontWeight: 700, fontSize: "1.2rem", fontFamily: "'DM Mono',monospace" }}>{fmt(total)}</span>
               </div>
             </div>
-            {form.forma === "fiado" && total > 0 && (
+            {form.forma === "parcelado" && total > 0 && (
               <div style={{ borderTop: "1px solid #2a2a2a", marginTop: ".75rem", paddingTop: ".75rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
                   <span style={{ fontSize: ".82rem", color: "#666", whiteSpace: "nowrap" }}>Entrada (R$)</span>

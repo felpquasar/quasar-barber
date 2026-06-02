@@ -132,7 +132,7 @@ export default function App() {
             <span style={{ overflow: "hidden", maxWidth: sidebar ? 80 : 0, opacity: sidebar ? 1 : 0, transition: "max-width .2s, opacity .15s", whiteSpace: "nowrap" }}>Recolher</span>
           </button>
         </aside>
-        <main style={{ flex: 1, padding: isMobile ? "1rem" : "2rem", paddingBottom: isMobile ? "74px" : "2rem", overflowY: "auto", maxHeight: "100vh" }}>
+        <main style={{ flex: 1, padding: isMobile ? "1rem" : "2rem", paddingBottom: isMobile ? "80px" : "2rem", overflowY: "auto", maxHeight: "100vh" }}>
           {loading
             ? <SkeletonDashboard />
             : <div key={aba} className="fade-in">
@@ -147,17 +147,17 @@ export default function App() {
         </main>
       </div>
       {isMobile && (
-        <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #1a1a1a", display: "flex", zIndex: 100, height: 58 }}>
+        <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #1a1a1a", display: "flex", zIndex: 100, height: 64 }}>
           {nav.map(n => (
             <button key={n.id} onClick={() => setAba(n.id)}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "none", background: "transparent", cursor: "pointer", color: aba === n.id ? "#c9a84c" : "#444", gap: 3, padding: "6px 0" }}>
+              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "none", background: "transparent", cursor: "pointer", color: aba === n.id ? "#c9a84c" : "#444", gap: 4, padding: "10px 0" }}>
               <span style={{ position: "relative" }}>
-                <Icon name={n.icon} size={19} />
+                <Icon name={n.icon} size={20} />
                 {n.badge > 0 && (
                   <span style={{ position: "absolute", top: -3, right: -3, width: 7, height: 7, background: "#e05a5a", borderRadius: "50%", border: "1px solid #111" }} />
                 )}
               </span>
-              <span style={{ fontSize: ".63rem", textTransform: "uppercase", letterSpacing: ".03em", lineHeight: 1 }}>{n.label}</span>
+              <span style={{ fontSize: ".67rem", textTransform: "uppercase", letterSpacing: ".03em", lineHeight: 1 }}>{n.label}</span>
             </button>
           ))}
         </nav>

@@ -9,9 +9,9 @@ import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Spinner from './ui/Spinner';
 
-const FORMAS = ["a_vista", "cartao", "pix", "fiado"];
-const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", fiado: "Fiado" };
-const FORMA_COR = { a_vista: "#4caf82", cartao: "#6b9fd4", pix: "#5cb8d4", fiado: "#e8a020" };
+const FORMAS = ["a_vista", "cartao", "pix", "parcelado"];
+const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", parcelado: "Parcelado" };
+const FORMA_COR = { a_vista: "#4caf82", cartao: "#6b9fd4", pix: "#5cb8d4", parcelado: "#e8a020" };
 const STATUS_COR = { pago: "#4caf82", pendente: "#e8a020", vencido: "#e05a5a" };
 const STATUS_LABEL = { pago: "Pago", pendente: "Pendente", vencido: "Vencido" };
 
@@ -33,7 +33,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
   const [modalPagar, setModalPagar] = useState(null);
   const [modalEditar, setModalEditar] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ clienteId: "", descricao: "", valor: "", forma: "fiado", vencimento: today(), obs: "" });
+  const [form, setForm] = useState({ clienteId: "", descricao: "", valor: "", forma: "parcelado", vencimento: today(), obs: "" });
   const [pagarForm, setPagarForm] = useState({ forma: "pix", data: today(), valorParcial: "" });
   const [editForm, setEditForm] = useState({});
   const [ordenarPor, setOrdenarPor] = useState("vencimento");
@@ -91,7 +91,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
       if (error) { console.error("contas_receber insert:", error); notify(`Erro ao salvar cobrança: ${error.message}`, "error"); return; }
       setContasReceber(prev => [...prev, data].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)));
       setModalNova(false);
-      setForm({ clienteId: "", descricao: "", valor: "", forma: "fiado", vencimento: today(), obs: "" });
+      setForm({ clienteId: "", descricao: "", valor: "", forma: "parcelado", vencimento: today(), obs: "" });
       notify("Cobrança lançada!");
     } finally { setSaving(false); }
   };
@@ -122,7 +122,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
       clienteId: cr.cliente_id ? String(cr.cliente_id) : "",
       descricao: cr.descricao || "",
       valor: String(cr.valor),
-      forma: cr.forma_pagamento || "fiado",
+      forma: cr.forma_pagamento || "parcelado",
       vencimento: cr.data_vencimento || today(),
       obs: cr.obs || "",
     });
