@@ -33,6 +33,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
   const [modalPagar, setModalPagar] = useState(null);
   const [modalEditar, setModalEditar] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [enviando, setEnviando] = useState(false);
   const [form, setForm] = useState({ clienteId: "", descricao: "", valor: "", forma: "parcelado", vencimento: today(), obs: "" });
   const [pagarForm, setPagarForm] = useState({ forma: "pix", data: today(), valorParcial: "" });
   const [editForm, setEditForm] = useState({});
@@ -156,11 +157,36 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
     notify("Cobrança removida.");
   };
 
+  const dispararCobranca = async () => {
+    if (!window.confirm(`Enviar cobrança via WhatsApp para ${totais.qtdVencido} cliente(s) em atraso?`)) return;
+    const url = process.env.REACT_APP_N8N_WEBHOOK_URL;
+    if (!url) { notify("Defina REACT_APP_N8N_WEBHOOK_URL no .env", "error"); return; }
+    setEnviando(true);
+    try {
+      await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "quasar-barber" }) });
+      notify(`Disparo iniciado — ${totais.qtdVencido} mensagem(s) em envio.`);
+    } catch {
+      notify("Erro ao conectar com o n8n. Verifique a URL do webhook.", "error");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Contas a Receber</h2>
-        <button style={btn("primary")} onClick={() => setModalNova(true)}><Icon name="plus" size={14} /> Nova Cobrança</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {totais.qtdVencido > 0 && (
+            <button
+              style={{ ...btn("ghost"), borderColor: "#e05a5a44", color: "#e05a5a" }}
+              onClick={dispararCobranca}
+              disabled={enviando}>
+              {enviando ? <><Spinner size={14} color="#e05a5a" /> Enviando...</> : `📱 Cobrar (${totais.qtdVencido})`}
+            </button>
+          )}
+          <button style={btn("primary")} onClick={() => setModalNova(true)}><Icon name="plus" size={14} /> Nova Cobrança</button>
+        </div>
       </div>
 
       {/* Cards de resumo */}
@@ -185,6 +211,12 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
             <b>{totais.qtdVencido} cobrança{totais.qtdVencido > 1 ? "s" : ""} em atraso</b>
             {" · "}Total: <b>{fmt(totais.vencido)}</b>
           </span>
+          <button
+            style={{ marginLeft: "auto", padding: "5px 14px", borderRadius: 6, border: "1px solid #e05a5a66", background: "#e05a5a22", color: "#e05a5a", cursor: "pointer", fontSize: ".82rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
+            onClick={dispararCobranca}
+            disabled={enviando}>
+            {enviando ? <><Spinner size={13} color="#e05a5a" /> Enviando...</> : "📱 Cobrar todos"}
+          </button>
         </div>
       )}
 

@@ -1,0 +1,160 @@
+{
+  "name": "Quasar Barber - Cobrança Inadimplentes",
+  "nodes": [
+    {
+      "id": "node-webhook-01",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "cobrar-inadimplentes",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cobrar-inadimplentes",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-supabase-02",
+      "name": "Buscar Inadimplentes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "YOUR_SUPABASE_URL/rest/v1/contas_receber",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_ANON_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_ANON_KEY"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,descricao,valor,data_vencimento,clientes(nome,telefone)"
+            },
+            {
+              "name": "status",
+              "value": "eq.pendente"
+            },
+            {
+              "name": "data_vencimento",
+              "value": "={{ 'lt.' + $now.toFormat('yyyy-MM-dd') }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-code-03",
+      "name": "Preparar Mensagens",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\n\nif (!items || items.length === 0) {\n  return [];\n}\n\nconst resultado = [];\n\nfor (const item of items) {\n  const conta = item.json;\n  const telefone = conta.clientes?.telefone;\n\n  if (!telefone || String(telefone).trim() === '') continue;\n\n  const tel = String(telefone).replace(/\\D/g, '');\n  const numero = tel.startsWith('55') ? tel : '55' + tel;\n\n  const valorFormatado = new Intl.NumberFormat('pt-BR', {\n    style: 'currency',\n    currency: 'BRL'\n  }).format(conta.valor);\n\n  const partes = conta.data_vencimento.split('-');\n  const dataFormatada = partes[2] + '/' + partes[1] + '/' + partes[0];\n\n  const mensagem =\n    'Olá, *' + conta.clientes.nome + '*! 👋\\n\\n' +\n    'Identificamos um débito em aberto:\\n\\n' +\n    '📋 *' + conta.descricao + '*\\n' +\n    '💰 Valor: *' + valorFormatado + '*\\n' +\n    '📅 Vencimento: *' + dataFormatada + '*\\n\\n' +\n    'Para regularizar ou negociar, entre em contato conosco. 💈\\n\\n' +\n    '*Quasar Barber*';\n\n  resultado.push({\n    json: {\n      numero,\n      mensagem,\n      cliente: conta.clientes.nome,\n      valor: conta.valor,\n      conta_id: conta.id\n    }\n  });\n}\n\nreturn resultado;"
+      }
+    },
+    {
+      "id": "node-evolution-04",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_EVOLUTION_API_URL/message/sendText/YOUR_INSTANCE_NAME",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_EVOLUTION_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.numero }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.mensagem }}"
+            },
+            {
+              "name": "delay",
+              "value": "1200"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Buscar Inadimplentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Inadimplentes": {
+      "main": [
+        [
+          {
+            "node": "Preparar Mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Mensagens": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "quasar-barber"
+  },
+  "id": "cobrar-inadimplentes-quasar-01",
+  "tags": []
+}
