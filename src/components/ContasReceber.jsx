@@ -157,6 +157,24 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
     notify("Cobrança removida.");
   };
 
+  const cobrarCliente = (cr) => {
+    const cli = clientes.find(c => c.id === cr.cliente_id);
+    if (!cli?.telefone) { notify("Cliente sem telefone cadastrado.", "error"); return; }
+    const tel = String(cli.telefone).replace(/\D/g, '');
+    const numero = tel.startsWith('55') ? tel : '55' + tel;
+    const partes = cr.data_vencimento.split('-');
+    const data = `${partes[2]}/${partes[1]}/${partes[0]}`;
+    const msg =
+      `Olá, *${cli.nome}*! 👋\n\n` +
+      `Identificamos um débito em aberto:\n\n` +
+      `📋 *${cr.descricao || 'Cobrança'}*\n` +
+      `💰 Valor: *${fmt(saldoCr(cr))}*\n` +
+      `📅 Vencimento: *${data}*\n\n` +
+      `Para regularizar ou negociar, entre em contato conosco. 💈\n\n` +
+      `*Quasar Barber*`;
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
   const dispararCobranca = async () => {
     if (!window.confirm(`Enviar cobrança via WhatsApp para ${totais.qtdVencido} cliente(s) em atraso?`)) return;
     const url = process.env.REACT_APP_N8N_WEBHOOK_URL;
@@ -304,6 +322,13 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
                             style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#6b9fd422", color: "#6b9fd4", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }}>
                             <Icon name="pencil" size={13} /> Editar
                           </button>
+                          {cr._status === "vencido" && (
+                            <button
+                              onClick={() => cobrarCliente(cr)}
+                              style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#e05a5a22", color: "#e05a5a", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }}>
+                              📱 Cobrar
+                            </button>
+                          )}
                         </>
                       )}
                       <button onClick={() => excluir(cr.id)} style={{ ...btn("danger"), padding: "4px 10px", fontSize: ".75rem" }}>
