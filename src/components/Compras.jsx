@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import EmptyState from './ui/EmptyState';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
-import { fmt, today } from '../lib/utils';
+import { fmt, today, addDays } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
 import Icon from './ui/Icon';
 import Modal from './ui/Modal';
@@ -22,8 +22,8 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
   const [modalVer, setModalVer] = useState(null);
   const [modalReceber, setModalReceber] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ fornecedor_id: "", data_pedido: today(), data_prevista: "", obs: "", itens: [{ ...ITEM_VAZIO }] });
-  const [receberForm, setReceberForm] = useState({ data_recebimento: today(), gerar_conta: false, forma_pagamento: "a_vista", data_vencimento: today() });
+  const [form, setForm] = useState({ fornecedor_id: "", data_pedido: today(), data_prevista: "", obs: "", itens: [{ ...ITEM_VAZIO }], forma_pagamento: "a_vista", parcelas: 1 });
+  const [receberForm, setReceberForm] = useState({ data_recebimento: today(), gerar_conta: false, forma_pagamento: "a_vista", parcelas: 1, data_vencimento: today() });
 
   const [ordenarPor, setOrdenarPor] = useState("data_pedido");
   const [ordenarDir, setOrdenarDir] = useState("desc");
@@ -56,12 +56,12 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
   , [form.itens]);
 
   const abrirNovo = () => {
-    setForm({ fornecedor_id: "", data_pedido: today(), data_prevista: "", obs: "", itens: [{ ...ITEM_VAZIO }] });
+    setForm({ fornecedor_id: "", data_pedido: today(), data_prevista: "", obs: "", itens: [{ ...ITEM_VAZIO }], forma_pagamento: "a_vista", parcelas: 1 });
     setModalNovo(true);
   };
 
   const abrirReceber = (pedido) => {
-    setReceberForm({ data_recebimento: today(), gerar_conta: false, forma_pagamento: "a_vista", data_vencimento: today() });
+    setReceberForm({ data_recebimento: today(), gerar_conta: false, forma_pagamento: pedido.forma_pagamento || "a_vista", parcelas: pedido.parcelas || 1, data_vencimento: today() });
     setModalReceber(pedido);
   };
 
@@ -102,7 +102,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
       ).select();
       if (ie) { notify(`Erro ao salvar itens: ${ie.message}`, "error"); return; }
 
-      setPedidosCompra(prev => [{ ...pedido, pedido_itens: itensData || [] }, ...prev]);
+      setPedidosCompra(prev => [{ ...pedido, pedido_itens: itensData || [], forma_pagamento: form.forma_pagamento, parcelas: form.parcelas }, ...prev]);
       setModalNovo(false);
       notify("Pedido criado!");
     } finally { setSaving(false); }
@@ -178,20 +178,23 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
       }));
       if (novosMovs.length > 0) setMovimentos(prev => [...novosMovs, ...prev]);
 
-      // Cria conta a pagar se solicitado
+      // Cria conta(s) a pagar se solicitado
       if (receberForm.gerar_conta && modalReceber.total > 0) {
-        const { data: cp, error: ce } = await supabase.from("contas_pagar").insert({
+        const n = receberForm.forma_pagamento === "parcelado" ? (receberForm.parcelas || 1) : 1;
+        const valorParcela = Number((modalReceber.total / n).toFixed(2));
+        const inserts = Array.from({ length: n }, (_, i) => ({
           fornecedor_id: modalReceber.fornecedor_id || null,
-          descricao: `Compra pedido #${modalReceber.id}`,
+          descricao: `Compra pedido #${modalReceber.id}${n > 1 ? ` (${i + 1}/${n})` : ""}`,
           categoria: "estoque",
-          valor: modalReceber.total,
+          valor: valorParcela,
           forma_pagamento: receberForm.forma_pagamento,
           data_emissao: receberForm.data_recebimento,
-          data_vencimento: receberForm.data_vencimento,
+          data_vencimento: addDays(receberForm.data_vencimento, i * 30),
           status: "pendente",
-        }).select().single();
+        }));
+        const { data: cp, error: ce } = await supabase.from("contas_pagar").insert(inserts).select();
         if (ce) notify(`Conta a pagar não criada: ${ce.message}`, "error");
-        else if (cp) setContasPagar(prev => [...prev, cp].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)));
+        else if (cp) setContasPagar(prev => [...prev, ...cp].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)));
       }
 
       setPedidosCompra(prev => prev.map(p => p.id === modalReceber.id
@@ -354,6 +357,29 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
               <span style={{ fontSize: ".8rem", color: "#555" }}>Total do Pedido</span>
               <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#c9a84c", fontFamily: "'DM Mono',monospace" }}>{fmt(totalForm)}</span>
             </div>
+
+            {/* Forma de pagamento */}
+            <div style={{ marginTop: "1rem", padding: "1rem", background: "#111", borderRadius: 8 }}>
+              <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: ".75rem" }}>Forma de Pagamento</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: form.forma_pagamento === "parcelado" ? ".75rem" : 0 }}>
+                {[{ v: "a_vista", l: "À Vista" }, { v: "parcelado", l: "Parcelado" }].map(({ v, l }) => (
+                  <button key={v} onClick={() => setForm(f => ({ ...f, forma_pagamento: v, parcelas: 1 }))}
+                    style={{ ...btn(form.forma_pagamento === v ? "primary" : "ghost"), flex: 1, justifyContent: "center" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {form.forma_pagamento === "parcelado" && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 6 }}>
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <button key={n} onClick={() => setForm(f => ({ ...f, parcelas: n }))}
+                      style={{ ...btn(form.parcelas === n ? "primary" : "ghost"), justifyContent: "center", fontSize: ".82rem" }}>
+                      {n}x
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: "1.25rem" }}>
@@ -460,15 +486,33 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
           </div>
 
           {receberForm.gerar_conta && (
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-              <Field label="Forma de Pagamento">
-                <select style={inp} value={receberForm.forma_pagamento} onChange={e => setReceberForm(f => ({ ...f, forma_pagamento: e.target.value }))}>
-                  {Object.entries(FORMA_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </Field>
-              <Field label="Data de Vencimento">
+            <div style={{ marginBottom: "1rem" }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: ".75rem" }}>
+                {[{ v: "a_vista", l: "À Vista" }, { v: "parcelado", l: "Parcelado" }].map(({ v, l }) => (
+                  <button key={v} onClick={() => setReceberForm(f => ({ ...f, forma_pagamento: v, parcelas: 1 }))}
+                    style={{ ...btn(receberForm.forma_pagamento === v ? "primary" : "ghost"), flex: 1, justifyContent: "center" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {receberForm.forma_pagamento === "parcelado" && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 6, marginBottom: ".75rem" }}>
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <button key={n} onClick={() => setReceberForm(f => ({ ...f, parcelas: n }))}
+                      style={{ ...btn(receberForm.parcelas === n ? "primary" : "ghost"), justifyContent: "center", fontSize: ".82rem" }}>
+                      {n}x
+                    </button>
+                  ))}
+                </div>
+              )}
+              <Field label={receberForm.forma_pagamento === "parcelado" ? "Vencimento 1ª Parcela" : "Data de Vencimento"}>
                 <input style={inp} type="date" value={receberForm.data_vencimento} onChange={e => setReceberForm(f => ({ ...f, data_vencimento: e.target.value }))} />
               </Field>
+              {receberForm.forma_pagamento === "parcelado" && receberForm.parcelas > 1 && (
+                <div style={{ marginTop: ".5rem", fontSize: ".78rem", color: "#555" }}>
+                  {receberForm.parcelas}x de {fmt(modalReceber ? modalReceber.total / receberForm.parcelas : 0)} · parcelas mensais
+                </div>
+              )}
             </div>
           )}
 
