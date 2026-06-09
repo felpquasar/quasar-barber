@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useMobile } from "../../hooks/useMobile";
 import Icon from "./Icon";
 
@@ -6,14 +7,12 @@ const Modal = ({ title, onClose, children, wide = false }) => {
   const isMobile = useMobile();
 
   useEffect(() => {
-    const main = document.querySelector("main");
-    if (!main) return;
-    const prev = main.style.overflowY;
-    main.style.overflowY = "hidden";
-    return () => { main.style.overflowY = prev; };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
   }, []);
 
-  return (
+  return createPortal(
     <div
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: isMobile ? ".75rem" : "1rem" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
@@ -25,7 +24,8 @@ const Modal = ({ title, onClose, children, wide = false }) => {
         </div>
         <div style={{ padding: isMobile ? "1rem" : "1.5rem" }}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
