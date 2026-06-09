@@ -20,6 +20,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
   const [modalNovo, setModalNovo] = useState(false);
   const [modalVer, setModalVer] = useState(null);
   const [modalReceber, setModalReceber] = useState(null);
+  const [modalEditar, setModalEditar] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ fornecedor_id: "", data_pedido: today(), data_prevista: "", obs: "", itens: [{ ...ITEM_VAZIO }], forma_pagamento: "a_vista", parcelas: 1 });
   const [receberForm, setReceberForm] = useState({ data_recebimento: today(), gerar_conta: false, forma_pagamento: "a_vista", parcelas: 1, data_vencimento: today() });
@@ -64,6 +65,23 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
     setModalReceber(pedido);
   };
 
+  const abrirEditar = (pedido) => {
+    setForm({
+      fornecedor_id: pedido.fornecedor_id ? String(pedido.fornecedor_id) : "",
+      data_pedido: pedido.data_pedido,
+      data_prevista: pedido.data_prevista || "",
+      obs: pedido.obs || "",
+      itens: (pedido.pedido_itens || [{ ...ITEM_VAZIO }]).map(it => ({
+        produto_id: String(it.produto_id),
+        quantidade: String(it.quantidade),
+        custo_unitario: String(it.custo_unitario),
+      })),
+      forma_pagamento: pedido.forma_pagamento || "a_vista",
+      parcelas: pedido.parcelas || 1,
+    });
+    setModalEditar(pedido);
+  };
+
   const addItem = () => setForm(f => ({ ...f, itens: [...f.itens, { ...ITEM_VAZIO }] }));
   const removeItem = i => setForm(f => ({ ...f, itens: f.itens.filter((_, idx) => idx !== i) }));
   const updateItem = (i, field, val) => setForm(f => ({
@@ -104,6 +122,37 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
       setPedidosCompra(prev => [{ ...pedido, pedido_itens: itensData || [], forma_pagamento: form.forma_pagamento, parcelas: form.parcelas }, ...prev]);
       setModalNovo(false);
       notify("Pedido criado!");
+    } finally { setSaving(false); }
+  };
+
+  const salvarEdicao = async () => {
+    const validos = form.itens.filter(it => it.produto_id && Number(it.quantidade) > 0);
+    if (!form.data_pedido) { notify("Informe a data do pedido.", "error"); return; }
+    if (validos.length === 0) { notify("Adicione pelo menos um item.", "error"); return; }
+    setSaving(true);
+    try {
+      const total = validos.reduce((s, it) => s + Number(it.quantidade) * (Number(it.custo_unitario) || 0), 0);
+      const { error: pe } = await supabase.from("pedidos_compra").update({
+        fornecedor_id: form.fornecedor_id ? Number(form.fornecedor_id) : null,
+        data_pedido: form.data_pedido,
+        data_prevista: form.data_prevista || null,
+        obs: form.obs || null,
+        total,
+      }).eq("id", modalEditar.id);
+      if (pe) { notify(`Erro ao atualizar pedido: ${pe.message}`, "error"); return; }
+
+      await supabase.from("pedido_itens").delete().eq("pedido_id", modalEditar.id);
+      const { data: novosItens, error: ie } = await supabase.from("pedido_itens").insert(
+        validos.map(it => ({ pedido_id: modalEditar.id, produto_id: Number(it.produto_id), quantidade: Number(it.quantidade), custo_unitario: Number(it.custo_unitario) || 0 }))
+      ).select();
+      if (ie) { notify(`Erro ao salvar itens: ${ie.message}`, "error"); return; }
+
+      setPedidosCompra(prev => prev.map(p => p.id === modalEditar.id
+        ? { ...p, fornecedor_id: form.fornecedor_id ? Number(form.fornecedor_id) : null, data_pedido: form.data_pedido, data_prevista: form.data_prevista || null, obs: form.obs || null, total, pedido_itens: novosItens || [], forma_pagamento: form.forma_pagamento, parcelas: form.parcelas }
+        : p
+      ));
+      setModalEditar(null);
+      notify("Pedido atualizado!");
     } finally { setSaving(false); }
   };
 
@@ -284,6 +333,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
                     <button onClick={() => setModalVer(p)} style={{ ...btn("ghost"), padding: "4px 10px", fontSize: ".75rem" }}>Ver</button>
                     {p.status === "pendente" && (
                       <>
+                        <button onClick={() => abrirEditar(p)} style={{ ...btn("ghost"), padding: "4px 10px", fontSize: ".75rem" }}><Icon name="pencil" size={12} /></button>
                         <button onClick={() => abrirReceber(p)} style={{ ...btn("primary"), padding: "4px 10px", fontSize: ".75rem" }}>Receber</button>
                         <button onClick={() => cancelarPedido(p)} style={{ ...btn("danger"), padding: "4px 10px", fontSize: ".75rem" }}><Icon name="trash" size={12} /></button>
                       </>
@@ -540,6 +590,108 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
             <button style={btn("ghost")} onClick={() => setModalReceber(null)}>Cancelar</button>
             <button style={btn("primary")} onClick={receberPedido} disabled={saving}>
               {saving ? <><Spinner size={14} color="#0a0a08" /> Recebendo...</> : "Confirmar Recebimento"}
+            </button>
+          </div>
+        </Modal>
+      )}
+      {/* Modal: Editar pedido */}
+      {modalEditar && (
+        <Modal title={`Editar Pedido #${modalEditar.id}`} onClose={() => setModalEditar(null)} wide>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: "1rem" }}>
+            <Field label="Fornecedor">
+              <select style={inp} value={form.fornecedor_id} onChange={e => setForm(f => ({ ...f, fornecedor_id: e.target.value }))}>
+                <option value="">Sem fornecedor</option>
+                {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              </select>
+            </Field>
+            <Field label="Data do Pedido">
+              <input style={inp} type="date" value={form.data_pedido} onChange={e => setForm(f => ({ ...f, data_pedido: e.target.value }))} />
+            </Field>
+            <Field label="Data Prevista">
+              <input style={inp} type="date" value={form.data_prevista} onChange={e => setForm(f => ({ ...f, data_prevista: e.target.value }))} />
+            </Field>
+          </div>
+          <Field label="Observação">
+            <input style={inp} value={form.obs} placeholder="Opcional" onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} />
+          </Field>
+
+          <div style={{ marginTop: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem" }}>
+              <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Itens do Pedido</div>
+              <button style={{ ...btn("ghost"), padding: "4px 10px", fontSize: ".78rem" }} onClick={addItem}><Icon name="plus" size={13} /> Adicionar Item</button>
+            </div>
+            <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 8, overflow: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 460 }}>
+                <thead>
+                  <tr style={{ background: "#161616" }}>
+                    {["Produto", "Qtd", "Custo Unit. (R$)", "Subtotal", ""].map((h, i) => (
+                      <th key={i} style={{ padding: ".5rem .75rem", textAlign: i >= 2 && i < 4 ? "right" : "left", fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {form.itens.map((it, i) => {
+                    const sub = (Number(it.quantidade) || 0) * (Number(it.custo_unitario) || 0);
+                    return (
+                      <tr key={i} style={{ borderTop: "1px solid #1f1f1f" }}>
+                        <td style={{ padding: ".5rem .75rem" }}>
+                          <select style={{ ...inp, minWidth: 180 }} value={it.produto_id} onChange={e => updateItem(i, "produto_id", e.target.value)}>
+                            <option value="">Selecione...</option>
+                            {produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                          </select>
+                        </td>
+                        <td style={{ padding: ".5rem .75rem" }}>
+                          <input style={{ ...inp, width: 70, textAlign: "right" }} type="number" min="1" placeholder="0" value={it.quantidade} onChange={e => updateItem(i, "quantidade", e.target.value)} />
+                        </td>
+                        <td style={{ padding: ".5rem .75rem" }}>
+                          <input style={{ ...inp, width: 110, textAlign: "right" }} type="number" step=".01" min="0" placeholder="0,00" value={it.custo_unitario} onChange={e => updateItem(i, "custo_unitario", e.target.value)} />
+                        </td>
+                        <td style={{ padding: ".5rem .75rem", textAlign: "right", color: "#ffbf00", fontFamily: "'DM Mono',monospace", fontSize: ".85rem", whiteSpace: "nowrap" }}>
+                          {sub > 0 ? fmt(sub) : "—"}
+                        </td>
+                        <td style={{ padding: ".5rem .75rem", textAlign: "right" }}>
+                          {form.itens.length > 1 && (
+                            <button onClick={() => removeItem(i)} style={{ ...btn("danger"), padding: "3px 8px" }}><Icon name="trash" size={12} /></button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "1rem", marginTop: ".75rem", padding: "0 .75rem" }}>
+              <span style={{ fontSize: ".8rem", color: "#555" }}>Total do Pedido</span>
+              <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#c9a84c", fontFamily: "'DM Mono',monospace" }}>{fmt(totalForm)}</span>
+            </div>
+
+            <div style={{ marginTop: "1rem", padding: "1rem", background: "#111", borderRadius: 8 }}>
+              <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: ".75rem" }}>Forma de Pagamento</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: form.forma_pagamento === "parcelado" ? ".75rem" : 0 }}>
+                {[{ v: "a_vista", l: "À Vista" }, { v: "parcelado", l: "Parcelado" }].map(({ v, l }) => (
+                  <button key={v} onClick={() => setForm(f => ({ ...f, forma_pagamento: v, parcelas: 1 }))}
+                    style={{ ...btn(form.forma_pagamento === v ? "primary" : "ghost"), flex: 1, justifyContent: "center" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {form.forma_pagamento === "parcelado" && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 6 }}>
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <button key={n} onClick={() => setForm(f => ({ ...f, parcelas: n }))}
+                      style={{ ...btn(form.parcelas === n ? "primary" : "ghost"), justifyContent: "center", fontSize: ".82rem" }}>
+                      {n}x
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: "1.25rem" }}>
+            <button style={btn("ghost")} onClick={() => setModalEditar(null)}>Cancelar</button>
+            <button style={btn("primary")} onClick={salvarEdicao} disabled={saving}>
+              {saving ? <><Spinner size={14} color="#0a0a08" /> Salvando...</> : "Salvar Alterações"}
             </button>
           </div>
         </Modal>
