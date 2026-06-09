@@ -10,6 +10,7 @@ const CATEGORIAS = [
   { id: "anuncios", label: "Anúncios" },
   { id: "marketing", label: "Marketing" },
   { id: "frete", label: "Frete" },
+  { id: "estoque", label: "Estoque" },
   { id: "outros", label: "Outros" },
 ];
 
@@ -17,6 +18,7 @@ const CAT_COLOR = {
   anuncios: "#6b9fd4",
   marketing: "#c9a84c",
   frete: "#4caf82",
+  estoque: "#b86fcf",
   outros: "#888",
 };
 

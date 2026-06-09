@@ -12,7 +12,7 @@ import EmptyState from './ui/EmptyState';
 
 const TABS = [{ id: "produtos", label: "Produtos" }, { id: "compras", label: "Compras" }];
 
-const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, setContasPagar, pedidosCompra, setPedidosCompra }) => {
+const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, setContasPagar, pedidosCompra, setPedidosCompra, setDespesas }) => {
   const isMobile = useMobile();
   const [abaEstoque, setAbaEstoque] = useState("produtos");
   const [modalProd, setModalProd] = useState(false);
@@ -150,7 +150,7 @@ td{padding:6px 10px;border-bottom:1px solid #eee}@media print{body{padding:0}}</
       </div>
 
       {abaEstoque === "compras" && (
-        <Compras produtos={produtos} setProdutos={setProdutos} setMovimentos={setMovimentos} fornecedores={fornecedores} setContasPagar={setContasPagar} pedidosCompra={pedidosCompra} setPedidosCompra={setPedidosCompra} notify={notify} />
+        <Compras produtos={produtos} setProdutos={setProdutos} setMovimentos={setMovimentos} fornecedores={fornecedores} setContasPagar={setContasPagar} pedidosCompra={pedidosCompra} setPedidosCompra={setPedidosCompra} setDespesas={setDespesas} notify={notify} />
       )}
 
       {abaEstoque === "produtos" && (

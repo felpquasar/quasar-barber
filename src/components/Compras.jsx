@@ -15,7 +15,7 @@ const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", transf
 
 const ITEM_VAZIO = { produto_id: "", quantidade: "", custo_unitario: "" };
 
-const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContasPagar, pedidosCompra, setPedidosCompra, notify }) => {
+const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContasPagar, pedidosCompra, setPedidosCompra, setDespesas, notify }) => {
   const isMobile = useMobile();
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [modalNovo, setModalNovo] = useState(false);
@@ -195,6 +195,22 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
         const { data: cp, error: ce } = await supabase.from("contas_pagar").insert(inserts).select();
         if (ce) notify(`Conta a pagar não criada: ${ce.message}`, "error");
         else if (cp) setContasPagar(prev => [...prev, ...cp].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)));
+      }
+
+      // Lança despesas automaticamente (uma por parcela, cada uma no seu mês)
+      if (modalReceber.total > 0) {
+        const n = receberForm.forma_pagamento === "parcelado" ? (receberForm.parcelas || 1) : 1;
+        const valorParcela = Number((modalReceber.total / n).toFixed(2));
+        const despInserts = Array.from({ length: n }, (_, i) => ({
+          descricao: `Compra pedido #${modalReceber.id}${n > 1 ? ` (${i + 1}/${n})` : ""}`,
+          categoria: "estoque",
+          valor: valorParcela,
+          data: addDays(receberForm.data_vencimento, i * 30),
+          observacao: nomeForn(modalReceber.fornecedor_id) || null,
+        }));
+        const { data: desp, error: de } = await supabase.from("despesas").insert(despInserts).select();
+        if (de) notify(`Despesa não lançada: ${de.message}`, "error");
+        else if (desp && setDespesas) setDespesas(prev => [...prev, ...desp]);
       }
 
       setPedidosCompra(prev => prev.map(p => p.id === modalReceber.id
