@@ -11,7 +11,6 @@ import Spinner from './ui/Spinner';
 
 const STATUS_COR = { pendente: "#e8a020", recebido: "#4caf82", cancelado: "#555" };
 const STATUS_LABEL = { pendente: "Pendente", recebido: "Recebido", cancelado: "Cancelado" };
-const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", transferencia: "Transferência" };
 
 const ITEM_VAZIO = { produto_id: "", quantidade: "", custo_unitario: "" };
 
