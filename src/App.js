@@ -34,7 +34,7 @@ const styles = `
   @keyframes shimmer{from{background-position:-500px 0}to{background-position:500px 0}}
   .skeleton{background:linear-gradient(90deg,#161616 25%,#1e1e1e 50%,#161616 75%);background-size:500px 100%;animation:shimmer 1.6s infinite linear;}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 `;
 
 export default function App() {
