@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import EmptyState from './ui/EmptyState';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
@@ -8,6 +8,7 @@ import Icon from './ui/Icon';
 import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Spinner from './ui/Spinner';
+import Confirm from './ui/Confirm';
 
 const STATUS_COR = { pendente: "#e8a020", recebido: "#4caf82", cancelado: "#555" };
 const STATUS_LABEL = { pendente: "Pendente", recebido: "Recebido", cancelado: "Cancelado" };
@@ -27,6 +28,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
 
   const [ordenarPor, setOrdenarPor] = useState("data_pedido");
   const [ordenarDir, setOrdenarDir] = useState("desc");
+  const [confirmState, setConfirmState] = useState(null);
 
   const toggleOrdem = (col) => {
     if (ordenarPor === col) setOrdenarDir(d => d === "asc" ? "desc" : "asc");
@@ -156,12 +158,13 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
     } finally { setSaving(false); }
   };
 
-  const cancelarPedido = async (pedido) => {
-    if (!window.confirm("Cancelar este pedido de compra?")) return;
-    const { error } = await supabase.from("pedidos_compra").update({ status: "cancelado" }).eq("id", pedido.id);
-    if (error) { notify(`Erro: ${error.message}`, "error"); return; }
-    setPedidosCompra(prev => prev.map(p => p.id === pedido.id ? { ...p, status: "cancelado" } : p));
-    notify("Pedido cancelado.");
+  const cancelarPedido = (pedido) => {
+    setConfirmState({ msg: "Cancelar este pedido de compra?", onConfirm: async () => {
+      const { error } = await supabase.from("pedidos_compra").update({ status: "cancelado" }).eq("id", pedido.id);
+      if (error) { notify(`Erro: ${error.message}`, "error"); return; }
+      setPedidosCompra(prev => prev.map(p => p.id === pedido.id ? { ...p, status: "cancelado" } : p));
+      notify("Pedido cancelado.");
+    }});
   };
 
   const receberPedido = async () => {
@@ -289,7 +292,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
       </div>
 
       {/* Tabela de pedidos */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 560 }}>
           <thead>
             <tr style={{ background: "#111" }}>
@@ -324,7 +327,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
                   )}
                 </td>
                 <td style={{ padding: ".8rem 1rem", textAlign: "center" }}>
-                  <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 20, background: (STATUS_COR[p.status] || "#555") + "22", color: STATUS_COR[p.status] || "#555" }}>
+                  <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 4, background: (STATUS_COR[p.status] || "#555") + "22", color: STATUS_COR[p.status] || "#555" }}>
                     {STATUS_LABEL[p.status] || p.status}
                   </span>
                 </td>
@@ -481,7 +484,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
             </div>
           )}
 
-          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
               <thead>
                 <tr style={{ background: "#111" }}>
@@ -696,8 +699,11 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
           </div>
         </Modal>
       )}
+      {confirmState && <Confirm msg={confirmState.msg} danger={confirmState.danger !== false} onConfirm={() => { confirmState.onConfirm(); setConfirmState(null); }} onCancel={() => setConfirmState(null)} />}
     </div>
   );
 };
 
 export default Compras;
+
+

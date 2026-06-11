@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
@@ -9,6 +9,7 @@ import Field from './ui/Field';
 import Spinner from './ui/Spinner';
 import Compras from './Compras';
 import EmptyState from './ui/EmptyState';
+import Confirm from './ui/Confirm';
 
 const TABS = [{ id: "produtos", label: "Produtos" }, { id: "compras", label: "Compras" }];
 
@@ -28,6 +29,7 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
   const [form, setForm] = useState({ nome: "", categoria: "", unidade: "un", estoque: 0, custo: "", lucro: "", preco: "" });
   const [editForm, setEditForm] = useState({ nome: "", categoria: "", unidade: "un", custo: "", lucro: "", preco: "" });
   const [movForm, setMovForm] = useState({ tipo: "entrada", quantidade: "", obs: "", data: today() });
+  const [confirmState, setConfirmState] = useState(null);
 
   const calcPreco = (custo, lucro) => { const c = Number(custo), l = Number(lucro); if (!c || !l || l < 0) return ""; return (c * (1 + l / 100)).toFixed(2); };
   const calcLucro = (custo, preco) => { const c = Number(custo), p = Number(preco); if (!c || !p || p <= c) return ""; return (((p - c) / c) * 100).toFixed(1); };
@@ -84,11 +86,12 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
     setModalMov(null); setMovForm({ tipo: "entrada", quantidade: "", obs: "", data: today() }); notify("Movimento registrado!");
   };
 
-  const excluir = async (id) => {
-    if (!window.confirm("Excluir este produto?")) return;
-    const { error } = await supabase.from("produtos").delete().eq("id", id);
-    if (error) { notify("Erro ao excluir", "error"); return; }
-    setProdutos(prev => prev.filter(p => p.id !== id)); notify("Produto excluído.");
+  const excluir = (id) => {
+    setConfirmState({ msg: "Excluir este produto?", onConfirm: async () => {
+      const { error } = await supabase.from("produtos").delete().eq("id", id);
+      if (error) { notify("Erro ao excluir", "error"); return; }
+      setProdutos(prev => prev.filter(p => p.id !== id)); notify("Produto excluído.");
+    }});
   };
 
   const toggleOrdem = (col) => {
@@ -143,7 +146,7 @@ td{padding:6px 10px;border-bottom:1px solid #eee}@media print{body{padding:0}}</
       <div style={{ display: "flex", gap: 0, marginBottom: "1.75rem", borderBottom: "1px solid #1f1f1f" }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setAbaEstoque(t.id)}
-            style={{ padding: "8px 20px 11px", border: "none", borderBottom: `2px solid ${abaEstoque === t.id ? "#ffbf00" : "transparent"}`, background: "transparent", cursor: "pointer", color: abaEstoque === t.id ? "#c9a84c" : "#555", fontSize: ".92rem", fontWeight: abaEstoque === t.id ? 600 : 400, transition: "all .15s", marginBottom: -1 }}>
+            style={{ padding: "8px 20px 11px", border: "none", borderBottom: `2px solid ${abaEstoque === t.id ? "#ffbf00" : "transparent"}`, background: "transparent", cursor: "pointer", color: abaEstoque === t.id ? "#e0d6b8" : "#3a3835", fontSize: ".92rem", fontWeight: abaEstoque === t.id ? 600 : 400, transition: "all .15s", marginBottom: -1 }}>
             {t.label}
           </button>
         ))}
@@ -163,7 +166,7 @@ td{padding:6px 10px;border-bottom:1px solid #eee}@media print{body{padding:0}}</
               <button style={btn("primary")} onClick={() => setModalProd(true)}><Icon name="plus" size={14} /> Novo Produto</button>
             </div>
           </div>
-          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 520 }}>
               <thead><tr style={{ background: "#111" }}>
                 {[
@@ -184,7 +187,7 @@ td{padding:6px 10px;border-bottom:1px solid #eee}@media print{body{padding:0}}</
                 {lista.map(p => (
                   <tr key={p.id} style={{ borderTop: "1px solid #1f1f1f" }}>
                     <td style={{ padding: ".8rem 1rem", color: "#e0e0e0", fontWeight: 500 }}>{p.nome}</td>
-                    <td style={{ padding: ".8rem 1rem" }}><span style={{ background: "#1f1f1f", color: "#888", padding: "2px 8px", borderRadius: 20, fontSize: ".75rem" }}>{p.categoria || "—"}</span></td>
+                    <td style={{ padding: ".8rem 1rem" }}><span style={{ background: "#1f1f1f", color: "#888", padding: "2px 8px", borderRadius: 4, fontSize: ".75rem" }}>{p.categoria || "—"}</span></td>
                     <td style={{ padding: ".8rem 1rem" }}><span style={{ color: p.estoque < 10 ? "#e05a5a" : "#e0e0e0", fontFamily: "'DM Mono',monospace" }}>{p.estoque} {p.unidade}</span></td>
                     <td style={{ padding: ".8rem 1rem", color: "#aaa", fontFamily: "'DM Mono',monospace" }}>{fmt(p.custo)}</td>
                     <td style={{ padding: ".8rem 1rem", color: "#ffbf00", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fmt(p.preco)}</td>
@@ -342,8 +345,11 @@ td{padding:6px 10px;border-bottom:1px solid #eee}@media print{body{padding:0}}</
           )}
         </div>
       )}
+      {confirmState && <Confirm msg={confirmState.msg} danger={confirmState.danger !== false} onConfirm={() => { confirmState.onConfirm(); setConfirmState(null); }} onCancel={() => setConfirmState(null)} />}
     </div>
   );
 };
 
 export default Estoque;
+
+

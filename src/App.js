@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
 import useStore from "./hooks/useStore";
 import { today } from "./lib/utils";
@@ -95,18 +95,18 @@ export default function App() {
           <nav style={{ flex: 1, padding: ".75rem .5rem" }}>
             {nav.map(n => (
               <button key={n.id} onClick={() => setAba(n.id)}
-                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", paddingLeft: 10, borderRadius: 8, border: "none", borderLeft: `2px solid ${aba === n.id ? "#ffbf00" : "transparent"}`, cursor: "pointer", background: aba === n.id ? "#1f1f12" : "transparent", color: aba === n.id ? "#c9a84c" : "#666", marginBottom: 2, textAlign: "left", transition: "all .15s" }}>
-                <span style={{ position: "relative", flexShrink: 0 }}>
-                  <Icon name={n.icon} size={18} />
+                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "8px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "transparent", color: aba === n.id ? "#e0d6b8" : "#383530", fontWeight: aba === n.id ? 500 : 400, marginBottom: 1, textAlign: "left", transition: "color .12s" }}>
+                <span style={{ position: "relative", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 6, background: aba === n.id ? "rgba(255,191,0,.1)" : "transparent", color: aba === n.id ? "#ffbf00" : "inherit", transition: "background .12s, color .12s" }}>
+                  <Icon name={n.icon} size={17} />
                   {n.badge > 0 && (
-                    <span style={{ position: "absolute", top: -3, right: -3, width: 7, height: 7, background: "#e05a5a", borderRadius: "50%", border: "1px solid #111", opacity: sidebar ? 0 : 1, transition: "opacity .15s" }} />
+                    <span style={{ position: "absolute", top: -1, right: -1, width: 7, height: 7, background: "#e05a5a", borderRadius: "50%", border: "1px solid #111", opacity: sidebar ? 0 : 1, transition: "opacity .15s" }} />
                   )}
                 </span>
                 <span style={{ flex: 1, overflow: "hidden", maxWidth: sidebar ? 130 : 0, opacity: sidebar ? 1 : 0, transition: "max-width .2s, opacity .15s", whiteSpace: "nowrap" }}>
                   {n.label}
                 </span>
                 {n.badge > 0 && (
-                  <span style={{ background: "#e05a5a", color: "#fff", borderRadius: 10, padding: "1px 6px", fontSize: ".65rem", fontWeight: 700, minWidth: 18, textAlign: "center", overflow: "hidden", maxWidth: sidebar ? 30 : 0, opacity: sidebar ? 1 : 0, transition: "max-width .2s, opacity .15s" }}>
+                  <span style={{ background: "#e05a5a", color: "#fff", borderRadius: 6, padding: "1px 6px", fontSize: ".65rem", fontWeight: 700, minWidth: 18, textAlign: "center", overflow: "hidden", maxWidth: sidebar ? 30 : 0, opacity: sidebar ? 1 : 0, transition: "max-width .2s, opacity .15s" }}>
                     {n.badge}
                   </span>
                 )}
@@ -150,7 +150,7 @@ export default function App() {
         <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #1a1a1a", display: "flex", zIndex: 100, height: 64 }}>
           {nav.map(n => (
             <button key={n.id} onClick={() => setAba(n.id)}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "none", background: "transparent", cursor: "pointer", color: aba === n.id ? "#c9a84c" : "#444", gap: 4, padding: "10px 0" }}>
+              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "none", background: "transparent", cursor: "pointer", color: aba === n.id ? "#ffbf00" : "#383530", gap: 4, padding: "10px 0" }}>
               <span style={{ position: "relative" }}>
                 <Icon name={n.icon} size={20} />
                 {n.badge > 0 && (
@@ -165,3 +165,4 @@ export default function App() {
     </>
   );
 }
+

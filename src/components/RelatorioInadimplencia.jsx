@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { fmt, today } from '../lib/utils';
 import { btn } from '../styles/shared';
 import Icon from './ui/Icon';
@@ -50,7 +50,7 @@ const RelatorioInadimplencia = ({ contasReceber, clientes }) => {
     return (
       <div>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: "0 0 1.5rem" }}>Inadimplência</h2>
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "4rem", textAlign: "center" }}>
+        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "4rem", textAlign: "center" }}>
           <div style={{ fontSize: "2rem", marginBottom: 10 }}>✓</div>
           <div style={{ color: "#4caf82", fontWeight: 600, fontSize: "1rem", marginBottom: 6 }}>Nenhuma inadimplência</div>
           <div style={{ color: "#555", fontSize: ".88rem" }}>Todas as cobranças estão em dia ou foram pagas.</div>
@@ -74,7 +74,7 @@ const RelatorioInadimplencia = ({ contasReceber, clientes }) => {
           { label: "Cobranças Vencidas", valor: vencidas.length, cor: "#e8a020" },
           { label: "Maior Atraso", valor: `${maxDiasGeral} dias`, cor: "#e05a5a" },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 10, padding: "1.1rem 1.25rem" }}>
+          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 6, padding: "1.1rem 1.25rem" }}>
             <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{s.label}</div>
             <div style={{ fontSize: "1.3rem", fontWeight: 700, color: s.cor, fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{s.valor}</div>
           </div>
@@ -82,7 +82,7 @@ const RelatorioInadimplencia = ({ contasReceber, clientes }) => {
       </div>
 
       {/* Tabela */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
           <thead>
             <tr style={{ background: "#111" }}>
@@ -105,7 +105,7 @@ const RelatorioInadimplencia = ({ contasReceber, clientes }) => {
                   <td style={{ padding: ".8rem 1rem", textAlign: "right", color: "#e05a5a", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{fmt(c.total)}</td>
                   <td style={{ padding: ".8rem 1rem", textAlign: "right", color: sev.cor, fontFamily: "'DM Mono',monospace" }}>{c.maxDias}d</td>
                   <td style={{ padding: ".8rem 1rem", textAlign: "right" }}>
-                    <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 20, background: sev.cor + "22", color: sev.cor }}>
+                    <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 4, background: sev.cor + "22", color: sev.cor }}>
                       {sev.label}
                     </span>
                   </td>
@@ -128,3 +128,5 @@ const RelatorioInadimplencia = ({ contasReceber, clientes }) => {
 };
 
 export default RelatorioInadimplencia;
+
+

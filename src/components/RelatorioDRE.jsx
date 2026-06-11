@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { fmt } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
 import Icon from './ui/Icon';
@@ -84,7 +84,7 @@ const RelatorioDRE = ({ contasReceber, contasPagar }) => {
           { label: "Total Pago", valor: totais.saidas, cor: "#e05a5a", prefix: "" },
           { label: "Resultado do Ano", valor: totais.resultado, cor: totais.resultado >= 0 ? "#4caf82" : "#e05a5a", prefix: totais.resultado > 0 ? "+" : "" },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 10, padding: "1.1rem 1.25rem" }}>
+          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 6, padding: "1.1rem 1.25rem" }}>
             <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{s.label} · {ano}</div>
             <div style={{ fontSize: "1.45rem", fontWeight: 700, color: s.cor, fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>
               {s.prefix}{fmt(s.valor)}
@@ -94,7 +94,7 @@ const RelatorioDRE = ({ contasReceber, contasPagar }) => {
       </div>
 
       {/* Gráfico */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem", marginBottom: "1.5rem" }}>
         <div style={{ display: "flex", gap: 16, marginBottom: "1rem", alignItems: "center" }}>
           <div style={{ flex: 1, fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Entradas vs Saídas · {ano}</div>
           {[["#4caf82", "Entradas"], ["#e05a5a", "Saídas"]].map(([cor, label]) => (
@@ -131,7 +131,7 @@ const RelatorioDRE = ({ contasReceber, contasPagar }) => {
       </div>
 
       {/* Tabela mensal */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
           <thead>
             <tr style={{ background: "#111" }}>
@@ -176,3 +176,4 @@ const RelatorioDRE = ({ contasReceber, contasPagar }) => {
 };
 
 export default RelatorioDRE;
+

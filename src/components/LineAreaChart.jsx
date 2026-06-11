@@ -122,11 +122,11 @@ const LineAreaChart = ({ dados }) => {
           }}>
             <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{d.label}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ffbf00", flexShrink: 0 }} />
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: "#ffbf00", flexShrink: 0 }} />
               <span style={{ fontSize: ".85rem", color: "#ffbf00", fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{fmt(d.valor)}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4caf82", flexShrink: 0 }} />
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: "#4caf82", flexShrink: 0 }} />
               <span style={{ fontSize: ".82rem", color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{d.qtd || 0} venda{(d.qtd || 0) !== 1 ? "s" : ""}</span>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
 import { inp, btn } from '../styles/shared';
@@ -173,7 +173,7 @@ const FluxoCaixa = ({ contasReceber, setContasReceber, contasPagar, setContasPag
           { label: "Saídas Pagas", valor: totais.saidas, cor: "#e05a5a" },
           { label: "Saldo Realizado", valor: totais.saldo, cor: totais.saldo >= 0 ? "#4caf82" : "#e05a5a" },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 10, padding: "1.1rem 1.25rem" }}>
+          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 6, padding: "1.1rem 1.25rem" }}>
             <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Realizado · {periodoLabel}</div>
             <div style={{ fontSize: "1.45rem", fontWeight: 700, color: s.cor, fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>
               {i === 2 && totais.saldo >= 0 ? "+" : ""}{fmt(s.valor)}
@@ -190,7 +190,7 @@ const FluxoCaixa = ({ contasReceber, setContasReceber, contasPagar, setContasPag
           { label: "A Pagar (pendente)", valor: totais.aPagar, cor: "#e8a020" },
           { label: "Saldo Projetado", valor: totais.projetado, cor: totais.projetado >= 0 ? "#4caf82" : "#e05a5a" },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}22`, borderRadius: 10, padding: "1.1rem 1.25rem" }}>
+          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}22`, borderRadius: 6, padding: "1.1rem 1.25rem" }}>
             <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Projetado · {periodoLabel}</div>
             <div style={{ fontSize: "1.45rem", fontWeight: 700, color: s.cor, fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>
               {i === 2 && totais.projetado >= 0 ? "+" : ""}{fmt(s.valor)}
@@ -201,7 +201,7 @@ const FluxoCaixa = ({ contasReceber, setContasReceber, contasPagar, setContasPag
       </div>
 
       {/* Gráfico */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem", marginBottom: "1.5rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <div>
             <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Evolução Mensal</div>
@@ -303,11 +303,11 @@ const FluxoCaixa = ({ contasReceber, setContasReceber, contasPagar, setContasPag
           Próximos vencimentos · 30 dias
         </div>
         {proximos.length === 0 ? (
-          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.5rem", textAlign: "center", color: "#444", fontSize: ".88rem" }}>
+          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.5rem", textAlign: "center", color: "#444", fontSize: ".88rem" }}>
             Nenhum vencimento nos próximos 30 dias
           </div>
         ) : (
-          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "hidden" }}>
             {proximos.map((item, i) => {
               const isReceber = item.tipo === "receber";
               const diasFaltam = Math.ceil((new Date(item.data_vencimento + "T12:00:00") - new Date(today() + "T12:00:00")) / 86400000);
@@ -415,3 +415,4 @@ const FluxoCaixa = ({ contasReceber, setContasReceber, contasPagar, setContasPag
 };
 
 export default FluxoCaixa;
+

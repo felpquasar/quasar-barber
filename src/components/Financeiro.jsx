@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { fmt, today } from '../lib/utils';
 import ContasReceber from './ContasReceber';
 import ContasPagar from './ContasPagar';
@@ -27,7 +27,7 @@ const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPag
 
   return (
     <div>
-      <div style={{ background: saldoCaixa >= 0 ? "#0d1f14" : "#1f0d0d", border: `1px solid ${saldoCaixa >= 0 ? "#1e4a2a" : "#5a1a1a"}`, borderRadius: 10, padding: "1rem 1.5rem", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+      <div style={{ background: saldoCaixa >= 0 ? "#0d1f14" : "#1f0d0d", border: `1px solid ${saldoCaixa >= 0 ? "#1e4a2a" : "#5a1a1a"}`, borderRadius: 6, padding: "1rem 1.5rem", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div>
           <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Saldo no Caixa</div>
           <div style={{ fontSize: "1.75rem", fontWeight: 700, color: saldoCaixa >= 0 ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(saldoCaixa)}</div>
@@ -42,10 +42,10 @@ const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPag
       <div style={{ display: "flex", gap: 0, marginBottom: "1.75rem", borderBottom: "1px solid #1f1f1f", overflowX: "auto" }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setAba(t.id)}
-            style={{ padding: "8px 16px 11px", border: "none", borderBottom: `2px solid ${aba === t.id ? "#ffbf00" : "transparent"}`, background: "transparent", cursor: "pointer", color: aba === t.id ? "#c9a84c" : "#555", fontSize: ".88rem", fontWeight: aba === t.id ? 600 : 400, display: "inline-flex", alignItems: "center", gap: 7, transition: "all .15s", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0 }}>
+            style={{ padding: "8px 16px 11px", border: "none", borderBottom: `2px solid ${aba === t.id ? "#ffbf00" : "transparent"}`, background: "transparent", cursor: "pointer", color: aba === t.id ? "#e0d6b8" : "#3a3835", fontSize: ".88rem", fontWeight: aba === t.id ? 600 : 400, display: "inline-flex", alignItems: "center", gap: 7, transition: "all .15s", marginBottom: -1, whiteSpace: "nowrap", flexShrink: 0 }}>
             {t.label}
             {t.badge > 0 && (
-              <span style={{ background: "#e05a5a", color: "#fff", borderRadius: 10, padding: "1px 6px", fontSize: ".65rem", fontWeight: 700, minWidth: 18, textAlign: "center" }}>
+              <span style={{ background: "#e05a5a", color: "#fff", borderRadius: 6, padding: "1px 6px", fontSize: ".65rem", fontWeight: 700, minWidth: 18, textAlign: "center" }}>
                 {t.badge}
               </span>
             )}
@@ -73,3 +73,4 @@ const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPag
 };
 
 export default Financeiro;
+

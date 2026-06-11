@@ -101,7 +101,6 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
     }
   }, [vp, periodo]);
 
-  const maxP = topProd[0]?.qty || 1;
   const labelPeriodo = periodo === "mes" ? "do Mês" : periodo === "semana" ? "da Semana" : "do Trimestre";
 
   return (
@@ -121,7 +120,7 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
       </div>
 
       {/* Saldo */}
-      <div style={{ background: saldoCaixa >= 0 ? "#0d1f14" : "#1f0d0d", border: `1px solid ${saldoCaixa >= 0 ? "#1e4a2a" : "#5a1a1a"}`, borderRadius: 10, padding: "1.25rem 1.5rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+      <div style={{ background: saldoCaixa >= 0 ? "#0d1f14" : "#1f0d0d", border: `1px solid ${saldoCaixa >= 0 ? "#1e4a2a" : "#5a1a1a"}`, borderRadius: 6, padding: "1.25rem 1.5rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div>
           <div style={{ fontSize: ".72rem", color: "#555", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Saldo no Caixa</div>
           <div style={{ fontSize: "2rem", fontWeight: 700, color: saldoCaixa >= 0 ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(saldoCaixa)}</div>
@@ -134,7 +133,7 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
       </div>
 
       {/* Hero Faturamento */}
-      <div style={{ background: "linear-gradient(135deg, #141200 0%, #0d0c00 100%)", border: "1px solid #2a2200", borderRadius: 12, padding: "1.5rem 2rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+      <div style={{ background: "#0e0d00", border: "1px solid #1e1b00", borderRadius: 8, padding: "1.5rem 2rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
         <div>
           <div style={{ fontSize: ".68rem", color: "#5a4a00", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Faturamento {labelPeriodo}</div>
           <div style={{ fontSize: "2.8rem", fontWeight: 700, color: "#ffbf00", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(fat)}</div>
@@ -154,21 +153,21 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
 
       {/* Cards secundários */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, marginBottom: "1.5rem" }}>
-        <div style={{ background: "#161616", border: `1px solid ${lucroPeriodo >= 0 ? "#1e3a2a" : "#3a1e1e"}`, borderRadius: 10, padding: "1.25rem" }}>
+        <div style={{ background: "#161616", border: `1px solid ${lucroPeriodo >= 0 ? "#1e3a2a" : "#3a1e1e"}`, borderRadius: 6, padding: "1.25rem" }}>
           <div style={{ fontSize: "1.6rem", fontWeight: 700, color: lucroPeriodo >= 0 ? "#4caf82" : "#e05a5a", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(lucroPeriodo)}</div>
           <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Lucro {labelPeriodo}</div>
         </div>
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem" }}>
+        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
           <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#b86fcf", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(custoEstoque)}</div>
           <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Custo do Estoque</div>
           <div style={{ fontSize: ".7rem", color: "#555", marginTop: 4 }}>{produtos.length} produto(s)</div>
         </div>
-        <div style={{ background: "#161616", border: `1px solid ${totalVencido > 0 ? "#5a1a1a" : "#2a2a2a"}`, borderRadius: 10, padding: "1.25rem" }}>
+        <div style={{ background: "#161616", border: `1px solid ${totalVencido > 0 ? "#5a1a1a" : "#2a2a2a"}`, borderRadius: 6, padding: "1.25rem" }}>
           <div style={{ fontSize: "1.6rem", fontWeight: 700, color: totalVencido > 0 ? "#e05a5a" : "#e8a020", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(totalAReceber)}</div>
           <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>A Receber</div>
           {totalVencido > 0 && <div style={{ fontSize: ".7rem", color: "#e05a5a", marginTop: 4 }}>{fmt(totalVencido)} em atraso</div>}
         </div>
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem" }}>
+        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
           <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#e05a5a", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(totalDespesas)}</div>
           <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Despesas {labelPeriodo}</div>
           <div style={{ fontSize: ".7rem", color: "#555", marginTop: 4 }}>Anúncios · Marketing · Frete</div>
@@ -192,7 +191,7 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
       )}
 
       {/* Gráfico */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem", marginBottom: "1.5rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
           <div>
             <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Evolução de Vendas</div>
@@ -210,35 +209,28 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
 
       {/* Top produtos e clientes */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: "1.5rem", marginBottom: "1.5rem" }}>
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem" }}>
+        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
           <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Top Produtos</div>
           <div style={{ fontSize: ".95rem", fontWeight: 600, color: "#e8e4d8", marginBottom: "1rem", marginTop: 4 }}>Mais vendidos</div>
           {topProd.length === 0 && <div style={{ color: "#444", fontSize: ".85rem" }}>Sem dados no período</div>}
           {topProd.map((tp, i) => { const p = produtos.find(x => x.id === tp.id); return (
-            <div key={i} style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: i === 0 ? "#ffbf00" : "#444", width: 16 }}>#{i + 1}</span>
-                  <span style={{ fontSize: ".85rem", color: "#ccc" }}>{p?.nome ?? `Produto #${tp.id}`}</span>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: ".8rem", color: "#ffbf00", fontFamily: "'DM Mono',monospace" }}>{tp.qty} un</div>
-                  <div style={{ fontSize: ".72rem", color: "#444" }}>{fmt(tp.valor)}</div>
-                </div>
-              </div>
-              <div style={{ background: "#1a1a10", borderRadius: 3, height: 3, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${(tp.qty / maxP) * 100}%`, background: "#ffbf00", borderRadius: 3 }} />
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < topProd.length - 1 ? "1px solid #141414" : "none" }}>
+              <span style={{ fontSize: ".78rem", fontFamily: "'DM Mono',monospace", color: i === 0 ? "#ffbf00" : "#2a2a2a", width: 20, flexShrink: 0, fontWeight: 700 }}>#{i + 1}</span>
+              <span style={{ flex: 1, fontSize: ".85rem", color: "#bbb", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p?.nome ?? `Produto #${tp.id}`}</span>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontSize: ".82rem", color: "#ffbf00", fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{tp.qty} un</div>
+                <div style={{ fontSize: ".72rem", color: "#444" }}>{fmt(tp.valor)}</div>
               </div>
             </div>
           ); })}
         </div>
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem" }}>
+        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
           <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Top Clientes</div>
           <div style={{ fontSize: ".95rem", fontWeight: 600, color: "#e8e4d8", marginBottom: "1rem", marginTop: 4 }}>Maiores compradores</div>
           {topCli.length === 0 && <div style={{ color: "#444", fontSize: ".85rem" }}>Sem dados no período</div>}
           {topCli.map((tc, i) => { const c = clientes.find(x => x.id === tc.id); return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, background: i === 0 ? "#1a1a10" : "transparent" }}>
-              <div style={{ width: 30, height: 30, borderRadius: "50%", background: i === 0 ? "#ffbf0022" : "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".75rem", color: i === 0 ? "#ffbf00" : "#555", fontFamily: "'DM Mono',monospace", flexShrink: 0 }}>{i + 1}</div>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < topCli.length - 1 ? "1px solid #141414" : "none" }}>
+              <div style={{ fontSize: ".78rem", color: i === 0 ? "#ffbf00" : "#2a2a2a", fontFamily: "'DM Mono',monospace", flexShrink: 0, fontWeight: 700, width: 20 }}>{i + 1}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: ".85rem", color: "#ccc", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c?.nome ?? `Cliente #${tc.id}`}</div>
                 <div style={{ fontSize: ".72rem", color: "#444" }}>{c?.cidade ?? ""} · {tc.pedidos} pedido(s)</div>
@@ -251,7 +243,7 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
 
       {/* Movimentos recentes */}
       <h3 style={{ fontSize: ".75rem", color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: ".75rem" }}>Movimentos Recentes</h3>
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "hidden" }}>
         {movimentos.slice(0, 6).map(m => { const p = produtos.find(x => x.id === m.produto_id); return (
           <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: ".9rem 1.25rem", borderBottom: "1px solid #1a1a1a" }}>
             <div style={{ color: m.tipo === "entrada" ? "#4caf82" : "#e05a5a", flexShrink: 0 }}><Icon name={m.tipo === "entrada" ? "up" : "down"} size={16} /></div>

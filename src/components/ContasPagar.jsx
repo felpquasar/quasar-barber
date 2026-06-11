@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import EmptyState from './ui/EmptyState';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
@@ -8,6 +8,7 @@ import Icon from './ui/Icon';
 import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Spinner from './ui/Spinner';
+import Confirm from './ui/Confirm';
 
 const FORMAS = ["a_vista", "cartao", "pix", "transferencia"];
 const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", transferencia: "Transferência" };
@@ -41,6 +42,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
   const [editForm, setEditForm] = useState({});
   const [ordenarPor, setOrdenarPor] = useState("vencimento");
   const [ordenarDir, setOrdenarDir] = useState("asc");
+  const [confirmState, setConfirmState] = useState(null);
 
   const toggleOrdem = (col) => {
     if (ordenarPor === col) setOrdenarDir(d => d === "asc" ? "desc" : "asc");
@@ -149,12 +151,13 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
     } finally { setSaving(false); }
   };
 
-  const excluir = async (id) => {
-    if (!window.confirm("Excluir esta conta?")) return;
-    const { error } = await supabase.from("contas_pagar").delete().eq("id", id);
-    if (error) { console.error("contas_pagar delete:", error); notify(`Erro ao excluir: ${error.message}`, "error"); return; }
-    setContasPagar(prev => prev.filter(cp => cp.id !== id));
-    notify("Conta removida.");
+  const excluir = (id) => {
+    setConfirmState({ msg: "Excluir esta conta?", onConfirm: async () => {
+      const { error } = await supabase.from("contas_pagar").delete().eq("id", id);
+      if (error) { console.error("contas_pagar delete:", error); notify(`Erro ao excluir: ${error.message}`, "error"); return; }
+      setContasPagar(prev => prev.filter(cp => cp.id !== id));
+      notify("Conta removida.");
+    }});
   };
 
   return (
@@ -170,7 +173,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
           { label: "Em Atraso", valor: totais.vencido, cor: "#e05a5a" },
           { label: "Pago", valor: totais.pago, cor: "#4caf82" },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 10, padding: "1.1rem 1.25rem" }}>
+          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 6, padding: "1.1rem 1.25rem" }}>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: s.cor, fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(s.valor)}</div>
             <div style={{ fontSize: ".72rem", color: "#666", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>{s.label}</div>
           </div>
@@ -201,7 +204,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
         ))}
       </div>
 
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 580 }}>
           <thead>
             <tr style={{ background: "#111" }}>
@@ -232,7 +235,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
                     {cp.obs && <div style={{ fontSize: ".7rem", color: "#555", marginTop: 2 }}>{cp.obs}</div>}
                   </td>
                   <td style={{ padding: ".8rem 1rem" }}>
-                    <span style={{ fontSize: ".75rem", padding: "2px 8px", borderRadius: 20, background: (CAT_COR[cp.categoria] || "#888") + "22", color: CAT_COR[cp.categoria] || "#888" }}>
+                    <span style={{ fontSize: ".75rem", padding: "2px 8px", borderRadius: 4, background: (CAT_COR[cp.categoria] || "#888") + "22", color: CAT_COR[cp.categoria] || "#888" }}>
                       {CAT_LABEL[cp.categoria] || cp.categoria}
                     </span>
                   </td>
@@ -244,7 +247,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
                   </td>
                   <td style={{ padding: ".8rem 1rem", color: "#ffbf00", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{fmt(cp.valor)}</td>
                   <td style={{ padding: ".8rem 1rem" }}>
-                    <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 20, background: STATUS_COR[cp._status] + "22", color: STATUS_COR[cp._status] }}>
+                    <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 4, background: STATUS_COR[cp._status] + "22", color: STATUS_COR[cp._status] }}>
                       {STATUS_LABEL[cp._status]}
                     </span>
                   </td>
@@ -431,8 +434,11 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
           </div>
         </Modal>
       )}
+      {confirmState && <Confirm msg={confirmState.msg} danger={confirmState.danger !== false} onConfirm={() => { confirmState.onConfirm(); setConfirmState(null); }} onCancel={() => setConfirmState(null)} />}
     </div>
   );
 };
 
 export default ContasPagar;
+
+

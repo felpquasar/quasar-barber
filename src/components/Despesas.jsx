@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
 import Icon from './ui/Icon';
@@ -94,7 +94,7 @@ const Despesas = ({ despesas, setDespesas, notify }) => {
         </button>
       </div>
 
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "hidden" }}>
         {despesas.length === 0 && (
           <div style={{ padding: "2rem", textAlign: "center", color: "#555", fontSize: ".85rem" }}>
             Nenhuma despesa lançada
@@ -183,3 +183,4 @@ const Despesas = ({ despesas, setDespesas, notify }) => {
 };
 
 export default Despesas;
+

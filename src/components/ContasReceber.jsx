@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import EmptyState from './ui/EmptyState';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
@@ -8,6 +8,7 @@ import Icon from './ui/Icon';
 import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Spinner from './ui/Spinner';
+import Confirm from './ui/Confirm';
 
 const FORMAS = ["a_vista", "cartao", "pix", "parcelado"];
 const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", parcelado: "Parcelado" };
@@ -39,6 +40,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
   const [editForm, setEditForm] = useState({});
   const [ordenarPor, setOrdenarPor] = useState("vencimento");
   const [ordenarDir, setOrdenarDir] = useState("asc");
+  const [confirmState, setConfirmState] = useState(null);
 
   const toggleOrdem = (col) => {
     if (ordenarPor === col) setOrdenarDir(d => d === "asc" ? "desc" : "asc");
@@ -149,12 +151,13 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
     } finally { setSaving(false); }
   };
 
-  const excluir = async (id) => {
-    if (!window.confirm("Excluir esta cobrança?")) return;
-    const { error } = await supabase.from("contas_receber").delete().eq("id", id);
-    if (error) { console.error("contas_receber delete:", error); notify(`Erro ao excluir: ${error.message}`, "error"); return; }
-    setContasReceber(prev => prev.filter(cr => cr.id !== id));
-    notify("Cobrança removida.");
+  const excluir = (id) => {
+    setConfirmState({ msg: "Excluir esta cobrança?", onConfirm: async () => {
+      const { error } = await supabase.from("contas_receber").delete().eq("id", id);
+      if (error) { console.error("contas_receber delete:", error); notify(`Erro ao excluir: ${error.message}`, "error"); return; }
+      setContasReceber(prev => prev.filter(cr => cr.id !== id));
+      notify("Cobrança removida.");
+    }});
   };
 
   const cobrarCliente = (cr) => {
@@ -175,19 +178,20 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const dispararCobranca = async () => {
-    if (!window.confirm(`Enviar cobrança via WhatsApp para ${totais.qtdVencido} cliente(s) em atraso?`)) return;
-    const url = process.env.REACT_APP_N8N_WEBHOOK_URL;
-    if (!url) { notify("Defina REACT_APP_N8N_WEBHOOK_URL no .env", "error"); return; }
-    setEnviando(true);
-    try {
-      await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "quasar-barber" }) });
-      notify(`Disparo iniciado — ${totais.qtdVencido} mensagem(s) em envio.`);
-    } catch {
-      notify("Erro ao conectar com o n8n. Verifique a URL do webhook.", "error");
-    } finally {
-      setEnviando(false);
-    }
+  const dispararCobranca = () => {
+    setConfirmState({ msg: `Enviar cobrança via WhatsApp para ${totais.qtdVencido} cliente(s) em atraso?`, danger: false, onConfirm: async () => {
+      const url = process.env.REACT_APP_N8N_WEBHOOK_URL;
+      if (!url) { notify("Defina REACT_APP_N8N_WEBHOOK_URL no .env", "error"); return; }
+      setEnviando(true);
+      try {
+        await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "quasar-barber" }) });
+        notify(`Disparo iniciado — ${totais.qtdVencido} mensagem(s) em envio.`);
+      } catch {
+        notify("Erro ao conectar com o n8n. Verifique a URL do webhook.", "error");
+      } finally {
+        setEnviando(false);
+      }
+    }});
   };
 
   return (
@@ -214,7 +218,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
           { label: "Em Atraso", valor: totais.vencido, cor: "#e05a5a" },
           { label: "Recebido", valor: totais.pago, cor: "#4caf82" },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 10, padding: "1.1rem 1.25rem" }}>
+          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 6, padding: "1.1rem 1.25rem" }}>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: s.cor, fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(s.valor)}</div>
             <div style={{ fontSize: ".72rem", color: "#666", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>{s.label}</div>
           </div>
@@ -254,7 +258,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
       </div>
 
       {/* Tabela */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 580 }}>
           <thead>
             <tr style={{ background: "#111" }}>
@@ -286,7 +290,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
                     {cr.venda_id && <div style={{ fontSize: ".7rem", color: "#555", marginTop: 2 }}>Venda #{String(cr.venda_id).slice(-4)}</div>}
                   </td>
                   <td style={{ padding: ".8rem 1rem" }}>
-                    <span style={{ fontSize: ".75rem", padding: "2px 8px", borderRadius: 20, background: (FORMA_COR[cr.forma_pagamento] || "#888") + "22", color: FORMA_COR[cr.forma_pagamento] || "#888" }}>
+                    <span style={{ fontSize: ".75rem", padding: "2px 8px", borderRadius: 4, background: (FORMA_COR[cr.forma_pagamento] || "#888") + "22", color: FORMA_COR[cr.forma_pagamento] || "#888" }}>
                       {FORMA_LABEL[cr.forma_pagamento] || cr.forma_pagamento}
                     </span>
                   </td>
@@ -304,7 +308,7 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
                     )}
                   </td>
                   <td style={{ padding: ".8rem 1rem" }}>
-                    <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 20, background: STATUS_COR[cr._status] + "22", color: STATUS_COR[cr._status] }}>
+                    <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 4, background: STATUS_COR[cr._status] + "22", color: STATUS_COR[cr._status] }}>
                       {STATUS_LABEL[cr._status]}
                     </span>
                   </td>
@@ -508,8 +512,11 @@ const ContasReceber = ({ contasReceber, setContasReceber, clientes, notify }) =>
           </Modal>
         );
       })()}
+      {confirmState && <Confirm msg={confirmState.msg} danger={confirmState.danger !== false} onConfirm={() => { confirmState.onConfirm(); setConfirmState(null); }} onCancel={() => setConfirmState(null)} />}
     </div>
   );
 };
 
 export default ContasReceber;
+
+

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt } from '../lib/utils';
@@ -7,6 +7,7 @@ import Icon from './ui/Icon';
 import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Spinner from './ui/Spinner';
+import Confirm from './ui/Confirm';
 
 const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) => {
   const isMobile = useMobile();
@@ -15,6 +16,7 @@ const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) =>
   const [saving, setSaving] = useState(false);
   const [filtro, setFiltro] = useState("");
   const [form, setForm] = useState({ nome: "", contato: "", telefone: "", cidade: "", obs: "" });
+  const [confirmState, setConfirmState] = useState(null);
 
   const abrir = (f = null) => {
     setEditando(f);
@@ -40,12 +42,13 @@ const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) =>
     } finally { setSaving(false); }
   };
 
-  const excluir = async (id) => {
-    if (!window.confirm("Excluir este fornecedor?")) return;
-    const { error } = await supabase.from("fornecedores").delete().eq("id", id);
-    if (error) { console.error("fornecedores delete:", error); notify(`Erro ao excluir: ${error.message}`, "error"); return; }
-    setFornecedores(prev => prev.filter(f => f.id !== id));
-    notify("Fornecedor excluído.");
+  const excluir = (id) => {
+    setConfirmState({ msg: "Excluir este fornecedor?", onConfirm: async () => {
+      const { error } = await supabase.from("fornecedores").delete().eq("id", id);
+      if (error) { console.error("fornecedores delete:", error); notify(`Erro ao excluir: ${error.message}`, "error"); return; }
+      setFornecedores(prev => prev.filter(f => f.id !== id));
+      notify("Fornecedor excluído.");
+    }});
   };
 
   const totalPendente = (fid) =>
@@ -69,7 +72,7 @@ const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) =>
         {lista.map(f => {
           const pendente = totalPendente(f.id);
           return (
-            <div key={f.id} style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.25rem" }}>
+            <div key={f.id} style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: ".75rem" }}>
                 <span style={{ fontWeight: 600, color: "#e0e0e0", fontSize: "1rem" }}>{f.nome}</span>
                 <span style={{ color: "#333" }}><Icon name="truck" size={16} /></span>
@@ -126,8 +129,10 @@ const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) =>
           </div>
         </Modal>
       )}
+      {confirmState && <Confirm msg={confirmState.msg} danger={confirmState.danger !== false} onConfirm={() => { confirmState.onConfirm(); setConfirmState(null); }} onCancel={() => setConfirmState(null)} />}
     </div>
   );
 };
 
 export default Fornecedores;
+

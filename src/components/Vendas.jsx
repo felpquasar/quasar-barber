@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import EmptyState from './ui/EmptyState';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
@@ -391,7 +391,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
         <span style={{ color: "#ffbf00", fontFamily: "'DM Mono',monospace" }}>{fmt(totalFiltrado)}</span>
       </div>
 
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 600 }}>
           <thead><tr style={{ background: "#111" }}>
             {[
@@ -419,12 +419,12 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
                 <td style={{ padding: ".8rem 1rem", color: "#999" }}>{(v.venda_itens || []).length} item(s)</td>
                 <td style={{ padding: ".8rem 1rem" }}>
                   {v.desconto_pct
-                    ? <span style={{ fontSize: ".78rem", padding: "2px 8px", borderRadius: 20, background: "#1f1a09", color: "#e8a020", fontFamily: "'DM Mono',monospace" }}>-{v.desconto_pct}%</span>
+                    ? <span style={{ fontSize: ".78rem", padding: "2px 8px", borderRadius: 4, background: "#1f1a09", color: "#e8a020", fontFamily: "'DM Mono',monospace" }}>-{v.desconto_pct}%</span>
                     : <span style={{ color: "#333", fontSize: ".78rem" }}>—</span>}
                 </td>
                 <td style={{ padding: ".8rem 1rem", color: "#ffbf00", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{fmt(v.total)}</td>
                 <td style={{ padding: ".8rem 1rem" }}>
-                  <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 20, background: (statusCor[v.status] || "#555") + "22", color: statusCor[v.status] || "#888" }}>{v.status}</span>
+                  <span style={{ fontSize: ".75rem", padding: "3px 10px", borderRadius: 4, background: (statusCor[v.status] || "#555") + "22", color: statusCor[v.status] || "#888" }}>{v.status}</span>
                 </td>
                 <td style={{ padding: ".8rem 1rem" }}>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -532,7 +532,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
               </div>
             ))}
           </div>
-          <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1rem 1.25rem", marginTop: ".5rem" }}>
+          <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1rem 1.25rem", marginTop: ".5rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem" }}>
               <span style={{ fontSize: ".82rem", color: "#666" }}>Subtotal</span>
               <span style={{ fontSize: ".95rem", color: "#aaa", fontFamily: "'DM Mono',monospace" }}>{fmt(subtotal)}</span>
@@ -664,7 +664,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
               </div>
             ))}
           </div>
-          <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1rem 1.25rem", marginTop: ".5rem" }}>
+          <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1rem 1.25rem", marginTop: ".5rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem" }}>
               <span style={{ fontSize: ".82rem", color: "#666" }}>Subtotal</span>
               <span style={{ fontSize: ".95rem", color: "#aaa", fontFamily: "'DM Mono',monospace" }}>{fmt(editSubtotal)}</span>
@@ -713,7 +713,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
           <div style={{ fontSize: ".88rem", color: "#aaa", marginBottom: "1rem" }}>
             <b style={{ color: "#ddd" }}>{clientes.find(c => c.id === detalhe.cliente_id)?.nome}</b>
             {" · "}{detalhe.data}
-            <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 20, background: (statusCor[detalhe.status] || "#555") + "22", color: statusCor[detalhe.status] || "#888", fontSize: ".75rem" }}>{detalhe.status}</span>
+            <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 4, background: (statusCor[detalhe.status] || "#555") + "22", color: statusCor[detalhe.status] || "#888", fontSize: ".75rem" }}>{detalhe.status}</span>
           </div>
           {(detalhe.venda_itens || []).map((it, i) => { const p = produtos.find(pp => pp.id === it.produto_id); return (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: ".6rem 0", borderBottom: "1px solid #1a1a1a" }}>
@@ -737,3 +737,5 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
 };
 
 export default Vendas;
+
+

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
@@ -7,6 +7,7 @@ import Icon from './ui/Icon';
 import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Spinner from './ui/Spinner';
+import Confirm from './ui/Confirm';
 
 const calcTier = (n) => {
   if (n >= 4) return { nome: "Elite", pct: 20, cor: "#c9a84c" };
@@ -24,6 +25,7 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
   const [historico, setHistorico] = useState(null);
   const [detalheVenda, setDetalheVenda] = useState(null);
   const [form, setForm] = useState({ nome: "", contato: "", telefone: "", cidade: "", tipo: "Barbearia", limite_credito: "", indicado_por: "" });
+  const [confirmState, setConfirmState] = useState(null);
 
   const abrir = (c = null) => {
     setEditando(c);
@@ -66,19 +68,21 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
     setModal(false); notify(editando ? "Cliente atualizado!" : "Cliente cadastrado!");
   };
 
-  const usarDesconto = async (c) => {
-    if (!window.confirm(`Aplicar ${c.desconto_pendente}% de desconto para ${c.nome}? Isso zerará o contador de indicações.`)) return;
-    const { error } = await supabase.from("clientes").update({ indicacoes_ativas: 0, desconto_pendente: 0 }).eq("id", c.id);
-    if (error) { notify("Erro ao aplicar desconto", "error"); return; }
-    setClientes(prev => prev.map(x => x.id === c.id ? { ...x, indicacoes_ativas: 0, desconto_pendente: 0 } : x));
-    notify(`Desconto de ${c.desconto_pendente}% aplicado e zerado!`);
+  const usarDesconto = (c) => {
+    setConfirmState({ msg: `Aplicar ${c.desconto_pendente}% de desconto para ${c.nome}? Isso zerará o contador de indicações.`, danger: false, onConfirm: async () => {
+      const { error } = await supabase.from("clientes").update({ indicacoes_ativas: 0, desconto_pendente: 0 }).eq("id", c.id);
+      if (error) { notify("Erro ao aplicar desconto", "error"); return; }
+      setClientes(prev => prev.map(x => x.id === c.id ? { ...x, indicacoes_ativas: 0, desconto_pendente: 0 } : x));
+      notify(`Desconto de ${c.desconto_pendente}% aplicado e zerado!`);
+    }});
   };
 
-  const excluir = async (id) => {
-    if (!window.confirm("Excluir este cliente?")) return;
-    const { error } = await supabase.from("clientes").delete().eq("id", id);
-    if (error) { notify("Erro ao excluir", "error"); return; }
-    setClientes(prev => prev.filter(c => c.id !== id)); notify("Cliente excluído.");
+  const excluir = (id) => {
+    setConfirmState({ msg: "Excluir este cliente?", onConfirm: async () => {
+      const { error } = await supabase.from("clientes").delete().eq("id", id);
+      if (error) { notify("Erro ao excluir", "error"); return; }
+      setClientes(prev => prev.filter(c => c.id !== id)); notify("Cliente excluído.");
+    }});
   };
 
   const metricas = (cid) => { const vs = vendas.filter(v => v.cliente_id === cid); const t = vs.reduce((a, v) => a + Number(v.total), 0); return { total: t, pedidos: vs.length, ticket: vs.length > 0 ? t / vs.length : 0 }; };
@@ -111,18 +115,18 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
           const tier = calcTier(Number(c.indicacoes_ativas) || 0);
           const indicador = c.indicado_por ? clientes.find(x => x.id === c.indicado_por) : null;
           return (
-            <div key={c.id} style={{ background: "#161616", border: `1px solid ${inadim ? "#5a1a1a" : "#2a2a2a"}`, borderRadius: 10, padding: "1.25rem" }}>
+            <div key={c.id} style={{ background: "#161616", border: `1px solid ${inadim ? "#5a1a1a" : "#2a2a2a"}`, borderRadius: 6, padding: "1.25rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: ".75rem" }}>
                 <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontWeight: 600, color: "#e0e0e0", fontSize: "1rem" }}>{c.nome}</span>
                     {inadim && (
-                      <span style={{ fontSize: ".65rem", padding: "2px 7px", borderRadius: 20, background: "#e05a5a22", color: "#e05a5a", fontWeight: 700, whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: ".65rem", padding: "2px 7px", borderRadius: 4, background: "#e05a5a22", color: "#e05a5a", fontWeight: 700, whiteSpace: "nowrap" }}>
                         Inadimplente
                       </span>
                     )}
                     {tier && (
-                      <span style={{ fontSize: ".65rem", padding: "2px 7px", borderRadius: 20, background: tier.cor + "22", color: tier.cor, fontWeight: 700, whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: ".65rem", padding: "2px 7px", borderRadius: 4, background: tier.cor + "22", color: tier.cor, fontWeight: 700, whiteSpace: "nowrap" }}>
                         {tier.nome}
                       </span>
                     )}
@@ -131,7 +135,7 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
                     <div style={{ fontSize: ".72rem", color: "#555", marginTop: 2 }}>Indicado por {indicador.nome}</div>
                   )}
                 </div>
-                <span style={{ fontSize: ".7rem", padding: "2px 8px", borderRadius: 20, background: (cores[c.tipo] || "#4caf82") + "22", color: cores[c.tipo] || "#4caf82", flexShrink: 0 }}>{c.tipo}</span>
+                <span style={{ fontSize: ".7rem", padding: "2px 8px", borderRadius: 4, background: (cores[c.tipo] || "#4caf82") + "22", color: cores[c.tipo] || "#4caf82", flexShrink: 0 }}>{c.tipo}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: "#888", lineHeight: 1.8 }}>
                 {c.contato && <div>👤 {c.contato}</div>}
@@ -250,7 +254,7 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                         <span style={{ fontSize: ".8rem", fontFamily: "'DM Mono',monospace", color: "#555" }}>#{String(v.id).slice(-4)}</span>
-                        <span style={{ fontSize: ".72rem", padding: "1px 8px", borderRadius: 20, background: (statusCor[v.status] || "#555") + "22", color: statusCor[v.status] || "#888" }}>{v.status}</span>
+                        <span style={{ fontSize: ".72rem", padding: "1px 8px", borderRadius: 4, background: (statusCor[v.status] || "#555") + "22", color: statusCor[v.status] || "#888" }}>{v.status}</span>
                       </div>
                       <div style={{ fontSize: ".78rem", color: "#555" }}>{v.data} · {(v.venda_itens || []).length} item(s)</div>
                     </div>
@@ -276,8 +280,11 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
           </div>
         </Modal>
       )}
+      {confirmState && <Confirm msg={confirmState.msg} danger={confirmState.danger !== false} onConfirm={() => { confirmState.onConfirm(); setConfirmState(null); }} onCancel={() => setConfirmState(null)} />}
     </div>
   );
 };
 
 export default Clientes;
+
+

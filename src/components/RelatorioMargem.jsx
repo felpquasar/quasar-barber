@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { fmt } from '../lib/utils';
 
 const RelatorioMargem = ({ vendas, produtos }) => {
@@ -77,7 +77,7 @@ const RelatorioMargem = ({ vendas, produtos }) => {
           { label: "Custo Total", val: fmt(totais.custo), cor: "#e05a5a" },
           { label: "Margem Bruta", val: fmt(totais.margem), cor: "#4caf82" },
         ].map(({ label, val, cor }) => (
-          <div key={label} style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1rem 1.25rem" }}>
+          <div key={label} style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1rem 1.25rem" }}>
             <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>{label}</div>
             <div style={{ fontSize: "1.4rem", fontWeight: 700, color: cor, fontFamily: "'DM Mono',monospace" }}>{val}</div>
           </div>
@@ -85,11 +85,11 @@ const RelatorioMargem = ({ vendas, produtos }) => {
       </div>
 
       {margens.length === 0 ? (
-        <div style={{ textAlign: "center", color: "#444", padding: "3rem", background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10 }}>
+        <div style={{ textAlign: "center", color: "#444", padding: "3rem", background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6 }}>
           Sem vendas no período selecionado.
         </div>
       ) : (
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "auto" }}>
+        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 640 }}>
             <thead><tr style={{ background: "#111" }}>
               {[
@@ -112,7 +112,7 @@ const RelatorioMargem = ({ vendas, produtos }) => {
                 <tr key={i} style={{ borderTop: "1px solid #1f1f1f" }}>
                   <td style={{ padding: ".8rem 1rem", color: "#e0e0e0", fontWeight: 500 }}>{p.nome}</td>
                   <td style={{ padding: ".8rem 1rem" }}>
-                    <span style={{ background: "#1f1f1f", color: "#888", padding: "2px 8px", borderRadius: 20, fontSize: ".75rem" }}>{p.categoria}</span>
+                    <span style={{ background: "#1f1f1f", color: "#888", padding: "2px 8px", borderRadius: 4, fontSize: ".75rem" }}>{p.categoria}</span>
                   </td>
                   <td style={{ padding: ".8rem 1rem", textAlign: "right", fontFamily: "'DM Mono',monospace", color: "#aaa" }}>{p.qtd}</td>
                   <td style={{ padding: ".8rem 1rem", textAlign: "right", fontFamily: "'DM Mono',monospace", color: "#e0e0e0" }}>{fmt(p.receita)}</td>
@@ -134,3 +134,5 @@ const RelatorioMargem = ({ vendas, produtos }) => {
 };
 
 export default RelatorioMargem;
+
+

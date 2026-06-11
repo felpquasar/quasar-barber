@@ -27,13 +27,11 @@ const Login = ({ onLogin }) => {
     <div style={{ minHeight: "100vh", background: "#080806", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 80, height: 80, borderRadius: 16, background: "#1a1a10", border: "1px solid #2a2a1a", marginBottom: "1rem" }}>
-            <img src={LOGO} alt="logo" style={{ width: 64, height: 64, borderRadius: 10, objectFit: "cover" }} />
-          </div>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.8rem", color: "#c9a84c" }}>Quasar Barber</div>
+          <img src={LOGO} alt="logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", display: "block", margin: "0 auto 1.5rem" }} />
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "2.2rem", letterSpacing: "-.01em", color: "#c9a84c", lineHeight: 1 }}>Quasar Barber</div>
           <div style={{ fontSize: ".75rem", color: "#444", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 4 }}>Sistema de Gestão</div>
         </div>
-        <form onSubmit={handleLogin} style={{ background: "#0f0f0c", border: "1px solid #1f1e18", borderRadius: 12, padding: "2rem" }}>
+        <form onSubmit={handleLogin} style={{ borderTop: "1px solid #1a1915", paddingTop: "2rem", marginTop: ".75rem" }}>
           <div style={{ marginBottom: "1.25rem" }}>
             <label style={{ display: "block", fontSize: ".72rem", color: "#666", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".05em" }}>Email</label>
             <div style={{ position: "relative" }}>
