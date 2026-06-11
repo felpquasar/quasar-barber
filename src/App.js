@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
 import useStore from "./hooks/useStore";
 import { today } from "./lib/utils";

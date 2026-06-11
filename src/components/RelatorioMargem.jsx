@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { fmt } from '../lib/utils';
 
 const RelatorioMargem = ({ vendas, produtos }) => {

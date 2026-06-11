@@ -28,3 +28,9 @@ yarn-error.log*
 video latest/
 quasar-barber/
 supabase/.temp/
+
+# n8n workflow exports com credenciais (nunca commitar)
+workflow-*.json
+contexto-compactado-*.md
+recovery_*.sql
+.vercel

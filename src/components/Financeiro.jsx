@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { fmt, today } from '../lib/utils';
 import ContasReceber from './ContasReceber';
 import ContasPagar from './ContasPagar';

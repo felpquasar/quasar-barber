@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+import { useMemo } from 'react';
 import { fmt, today } from '../lib/utils';
 import { btn } from '../styles/shared';
 import Icon from './ui/Icon';

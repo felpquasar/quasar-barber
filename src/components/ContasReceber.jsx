@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import EmptyState from './ui/EmptyState';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
