@@ -27,15 +27,15 @@ const Financeiro = ({ contasReceber, setContasReceber, contasPagar, setContasPag
 
   return (
     <div>
-      <div style={{ background: saldoCaixa >= 0 ? "#0d1f14" : "#1f0d0d", border: `1px solid ${saldoCaixa >= 0 ? "#1e4a2a" : "#5a1a1a"}`, borderRadius: 6, padding: "1rem 1.5rem", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+      <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 14, padding: "1.1rem 1.5rem", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
         <div>
-          <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Saldo no Caixa</div>
+          <div style={{ fontSize: ".62rem", color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 7 }}>Saldo no Caixa</div>
           <div style={{ fontSize: "1.75rem", fontWeight: 700, color: saldoCaixa >= 0 ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(saldoCaixa)}</div>
         </div>
-        <div style={{ fontSize: ".75rem", color: "#444", textAlign: "right", lineHeight: 1.7 }}>
-          <div>Vendas: <span style={{ color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{fmt(totalVendas)}</span></div>
-          <div>Fornecedores: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt(totalFornecedores)}</span></div>
-          <div>Despesas: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt(totalDespesas)}</span></div>
+        <div style={{ fontSize: ".74rem", color: "#555", minWidth: 220, lineHeight: 2 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span>Vendas</span><span style={{ color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{fmt(totalVendas)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span>Fornecedores</span><span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt(totalFornecedores)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span>Despesas</span><span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt(totalDespesas)}</span></div>
         </div>
       </div>
 

@@ -110,7 +110,7 @@ const RelatorioVendas = ({ vendas, clientes, produtos }) => {
           { label: "Recebido", valor: resumo.recebido, cor: "#4caf82", fmt },
           { label: "A Receber", valor: resumo.pendente, cor: "#e8a020", fmt },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 6, padding: "1.1rem 1.25rem" }}>
+          <div key={i} style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, padding: "1.1rem 1.25rem" }}>
             <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{s.label}</div>
             <div style={{ fontSize: "1.2rem", fontWeight: 700, color: s.cor, fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>
               {s.fmt(s.valor)}
@@ -125,7 +125,7 @@ const RelatorioVendas = ({ vendas, clientes, produtos }) => {
           <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: ".75rem" }}>
             Top clientes · {filtradas.length} venda{filtradas.length !== 1 ? "s" : ""} no período
           </div>
-          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, overflow: "hidden" }}>
             {topClientes.length === 0 ? (
               <div style={{ padding: "2.5rem", textAlign: "center", color: "#444", fontSize: ".88rem" }}>Nenhuma venda no período</div>
             ) : (
@@ -161,7 +161,7 @@ const RelatorioVendas = ({ vendas, clientes, produtos }) => {
         {/* Por forma de pagamento */}
         <div>
           <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: ".75rem" }}>Por forma de pagamento</div>
-          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.1rem 1.25rem" }}>
+          <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, padding: "1.1rem 1.25rem" }}>
             {porForma.length === 0 ? (
               <div style={{ color: "#444", fontSize: ".82rem" }}>Sem dados no período</div>
             ) : porForma.map(f => {

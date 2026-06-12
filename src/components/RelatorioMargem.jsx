@@ -77,7 +77,7 @@ const RelatorioMargem = ({ vendas, produtos }) => {
           { label: "Custo Total", val: fmt(totais.custo), cor: "#e05a5a" },
           { label: "Margem Bruta", val: fmt(totais.margem), cor: "#4caf82" },
         ].map(({ label, val, cor }) => (
-          <div key={label} style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1rem 1.25rem" }}>
+          <div key={label} style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, padding: "1rem 1.25rem" }}>
             <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>{label}</div>
             <div style={{ fontSize: "1.4rem", fontWeight: 700, color: cor, fontFamily: "'DM Mono',monospace" }}>{val}</div>
           </div>
@@ -85,11 +85,11 @@ const RelatorioMargem = ({ vendas, produtos }) => {
       </div>
 
       {margens.length === 0 ? (
-        <div style={{ textAlign: "center", color: "#444", padding: "3rem", background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6 }}>
+        <div style={{ textAlign: "center", color: "#444", padding: "3rem", background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10 }}>
           Sem vendas no período selecionado.
         </div>
       ) : (
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
+        <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, overflow: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 640 }}>
             <thead><tr style={{ background: "#111" }}>
               {[

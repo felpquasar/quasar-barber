@@ -3,7 +3,7 @@ const Skeleton = ({ width = "100%", height = 16, radius = 4, style = {} }) => (
 );
 
 export const SkeletonCard = () => (
-  <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
+  <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, padding: "1.25rem" }}>
     <Skeleton height={26} width="55%" style={{ marginBottom: 8 }} />
     <Skeleton height={11} width="35%" />
   </div>
@@ -20,13 +20,13 @@ export const SkeletonDashboard = () => (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, marginBottom: "1.5rem" }}>
       {[0, 1, 2, 3].map(i => <SkeletonCard key={i} />)}
     </div>
-    <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem", marginBottom: "1.5rem" }}>
+    <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem" }}>
       <Skeleton height={11} width={160} style={{ marginBottom: "1rem" }} />
       <Skeleton height={160} />
     </div>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: "1.5rem" }}>
       {[0, 1].map(i => (
-        <div key={i} style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
+        <div key={i} style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, padding: "1.25rem" }}>
           <Skeleton height={11} width={100} style={{ marginBottom: 14 }} />
           {[100, 82, 66, 50, 36].map((w, j) => (
             <Skeleton key={j} height={10} width={`${w}%`} style={{ marginBottom: 10 }} />

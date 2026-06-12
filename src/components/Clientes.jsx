@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMobile } from '../hooks/useMobile';
 import { supabase } from '../lib/supabase';
 import { fmt, today } from '../lib/utils';
@@ -8,6 +8,7 @@ import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Spinner from './ui/Spinner';
 import Confirm from './ui/Confirm';
+import EmptyState from './ui/EmptyState';
 
 const calcTier = (n) => {
   if (n >= 4) return { nome: "Elite", pct: 20, cor: "#c9a84c" };
@@ -16,13 +17,23 @@ const calcTier = (n) => {
   return null;
 };
 
+const card = { background: "#141414", border: "1px solid #1f1f1f", borderRadius: 14 };
+const Badge = ({ children, color }) => (
+  <span style={{ fontSize: ".65rem", padding: "2px 7px", borderRadius: 4, background: color + "22", color, fontWeight: 700, whiteSpace: "nowrap" }}>{children}</span>
+);
+
+const TIPOS = ["Barbearia", "Salão", "Distribuidor", "Outros"];
+const tipoCor = { Barbearia: "#ffbf00", Salão: "#b86fcf", Distribuidor: "#6b9fd4", Outros: "#4caf82" };
+
 const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, notify }) => {
   const isMobile = useMobile();
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
   const [saving, setSaving] = useState(false);
   const [filtro, setFiltro] = useState("");
-  const [historico, setHistorico] = useState(null);
+  const [filtroTipo, setFiltroTipo] = useState("todos");
+  const [ordem, setOrdem] = useState("total");
+  const [selId, setSelId] = useState(null);
   const [detalheVenda, setDetalheVenda] = useState(null);
   const [form, setForm] = useState({ nome: "", contato: "", telefone: "", cidade: "", tipo: "Barbearia", limite_credito: "", indicado_por: "" });
   const [confirmState, setConfirmState] = useState(null);
@@ -50,6 +61,7 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
       const { data, error } = await supabase.from("clientes").insert(payload).select().single();
       setSaving(false); if (error) { notify("Erro ao salvar", "error"); return; }
       setClientes(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setSelId(data.id);
 
       if (form.indicado_por) {
         const refId = Number(form.indicado_por);
@@ -65,7 +77,7 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
         }
       }
     }
-    setModal(false); notify(editando ? "Cliente atualizado!" : "Cliente cadastrado!");
+    setModal(false); notify(editando ? "Cliente atualizado." : "Cliente cadastrado.");
   };
 
   const usarDesconto = (c) => {
@@ -73,7 +85,7 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
       const { error } = await supabase.from("clientes").update({ indicacoes_ativas: 0, desconto_pendente: 0 }).eq("id", c.id);
       if (error) { notify("Erro ao aplicar desconto", "error"); return; }
       setClientes(prev => prev.map(x => x.id === c.id ? { ...x, indicacoes_ativas: 0, desconto_pendente: 0 } : x));
-      notify(`Desconto de ${c.desconto_pendente}% aplicado e zerado!`);
+      notify(`Desconto de ${c.desconto_pendente}% aplicado e zerado.`);
     }});
   };
 
@@ -81,122 +93,231 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
     setConfirmState({ msg: "Excluir este cliente?", onConfirm: async () => {
       const { error } = await supabase.from("clientes").delete().eq("id", id);
       if (error) { notify("Erro ao excluir", "error"); return; }
-      setClientes(prev => prev.filter(c => c.id !== id)); notify("Cliente excluído.");
+      setClientes(prev => prev.filter(c => c.id !== id));
+      if (selId === id) setSelId(null);
+      notify("Cliente excluído.");
     }});
   };
 
   const metricas = (cid) => { const vs = vendas.filter(v => v.cliente_id === cid); const t = vs.reduce((a, v) => a + Number(v.total), 0); return { total: t, pedidos: vs.length, ticket: vs.length > 0 ? t / vs.length : 0 }; };
   const vcli = (cid) => vendas.filter(v => v.cliente_id === cid).sort((a, b) => (b.data || "").localeCompare(a.data || ""));
   const statusCor = { pago: "#4caf82", pendente: "#e8a020", cancelado: "#e05a5a" };
-  const cores = { Barbearia: "#ffbf00", Salão: "#b86fcf", Distribuidor: "#6b9fd4", Outros: "#4caf82" };
-  const lista = clientes.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()));
 
   const inadimplente = (cid) => (contasReceber || []).some(cr => cr.cliente_id === cid && cr.status !== "pago" && cr.data_vencimento < today());
   const pendenteCli = (cid) => (contasReceber || []).filter(cr => cr.cliente_id === cid && cr.status !== "pago").reduce((a, c) => a + Number(c.valor), 0);
 
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: "1.5rem", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Clientes</h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input placeholder="Buscar cliente..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ ...inp, width: isMobile ? "100%" : 200 }} />
-          <button style={btn("primary")} onClick={() => abrir()}><Icon name="plus" size={14} /> Novo Cliente</button>
-        </div>
+  const lista = useMemo(() => {
+    let l = clientes
+      .filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()) || (c.cidade || "").toLowerCase().includes(filtro.toLowerCase()))
+      .filter(c => filtroTipo === "todos" || c.tipo === filtroTipo)
+      .map(c => ({ ...c, _m: metricas(c.id), _inadim: inadimplente(c.id) }));
+    if (ordem === "total") l.sort((a, b) => b._m.total - a._m.total);
+    else l.sort((a, b) => a.nome.localeCompare(b.nome));
+    return l;
+  }, [clientes, filtro, filtroTipo, ordem, vendas, contasReceber]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sel = selId ? clientes.find(c => c.id === selId) : null;
+  const qtdInadim = clientes.filter(c => inadimplente(c.id)).length;
+
+  const waLink = (tel) => {
+    const dig = (tel || "").replace(/\D/g, "");
+    if (!dig) return null;
+    return `https://wa.me/${dig.length <= 11 ? "55" + dig : dig}`;
+  };
+
+  const ordBtn = (key, label) => (
+    <button onClick={() => setOrdem(key)}
+      style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: ordem === key ? "#262626" : "transparent", color: ordem === key ? "#e0d6b8" : "#555", fontSize: ".72rem", fontWeight: ordem === key ? 600 : 400 }}>
+      {label}
+    </button>
+  );
+
+  const listaPane = (
+    <div style={{ ...card, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ padding: "12px 14px", borderBottom: "1px solid #1c1c1c", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <input placeholder="Buscar nome ou cidade..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ ...inp, flex: 1, minWidth: 140, padding: "8px 10px", fontSize: ".82rem" }} />
+        <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} style={{ ...inp, width: "auto", padding: "8px 10px", fontSize: ".78rem" }}>
+          <option value="todos">Todos os tipos</option>
+          {TIPOS.map(t => <option key={t}>{t}</option>)}
+        </select>
       </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
+      <div style={{ padding: "8px 14px", borderBottom: "1px solid #1c1c1c", display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ fontSize: ".68rem", color: "#444", textTransform: "uppercase", letterSpacing: ".08em", marginRight: 4 }}>Ordenar</span>
+        {ordBtn("total", "Maior total")}
+        {ordBtn("nome", "Nome")}
+        <span style={{ marginLeft: "auto", fontSize: ".7rem", color: "#444", fontFamily: "'DM Mono',monospace" }}>{lista.length}</span>
+      </div>
+      <div style={{ overflowY: "auto", flex: 1 }}>
+        {lista.length === 0 && <EmptyState iconName="users" title="Nenhum cliente encontrado" subtitle={filtro ? `Sem resultados para "${filtro}"` : "Cadastre o primeiro cliente"} />}
         {lista.map(c => {
-          const m = metricas(c.id);
-          const inadim = inadimplente(c.id);
-          const pendente = pendenteCli(c.id);
-          const limCred = Number(c.limite_credito) || 0;
-          const pctCred = limCred > 0 ? Math.min(pendente / limCred * 100, 100) : 0;
-          const corCred = pctCred >= 90 ? "#e05a5a" : pctCred >= 70 ? "#e8a020" : "#4caf82";
-          const tier = calcTier(Number(c.indicacoes_ativas) || 0);
-          const indicador = c.indicado_por ? clientes.find(x => x.id === c.indicado_por) : null;
+          const ativo = selId === c.id;
           return (
-            <div key={c.id} style={{ background: "#161616", border: `1px solid ${inadim ? "#5a1a1a" : "#2a2a2a"}`, borderRadius: 6, padding: "1.25rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: ".75rem" }}>
-                <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ fontWeight: 600, color: "#e0e0e0", fontSize: "1rem" }}>{c.nome}</span>
-                    {inadim && (
-                      <span style={{ fontSize: ".65rem", padding: "2px 7px", borderRadius: 4, background: "#e05a5a22", color: "#e05a5a", fontWeight: 700, whiteSpace: "nowrap" }}>
-                        Inadimplente
-                      </span>
-                    )}
-                    {tier && (
-                      <span style={{ fontSize: ".65rem", padding: "2px 7px", borderRadius: 4, background: tier.cor + "22", color: tier.cor, fontWeight: 700, whiteSpace: "nowrap" }}>
-                        {tier.nome}
-                      </span>
-                    )}
-                  </div>
-                  {indicador && (
-                    <div style={{ fontSize: ".72rem", color: "#555", marginTop: 2 }}>Indicado por {indicador.nome}</div>
-                  )}
+            <button key={c.id} onClick={() => { setSelId(c.id); setDetalheVenda(null); }}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "11px 14px", border: "none", borderBottom: "1px solid #191919", cursor: "pointer", background: ativo ? "rgba(255,191,0,.05)" : "transparent", boxShadow: ativo ? "inset 2px 0 0 #ffbf00" : "none" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 600, color: ativo ? "#f0ead8" : "#ccc", fontSize: ".88rem" }}>{c.nome}</span>
+                  {c._inadim && <span title="Inadimplente" style={{ width: 7, height: 7, borderRadius: "50%", background: "#e05a5a", flexShrink: 0 }} />}
+                  {Number(c.desconto_pendente) > 0 && <Badge color="#4caf82">{c.desconto_pendente}%</Badge>}
                 </div>
-                <span style={{ fontSize: ".7rem", padding: "2px 8px", borderRadius: 4, background: (cores[c.tipo] || "#4caf82") + "22", color: cores[c.tipo] || "#4caf82", flexShrink: 0 }}>{c.tipo}</span>
+                <div style={{ fontSize: ".7rem", color: "#555", marginTop: 2 }}>
+                  <span style={{ color: tipoCor[c.tipo] || "#4caf82" }}>{c.tipo}</span>{c.cidade ? ` · ${c.cidade}` : ""}
+                </div>
               </div>
-              <div style={{ fontSize: ".82rem", color: "#888", lineHeight: 1.8 }}>
-                {c.contato && <div>👤 {c.contato}</div>}
-                {c.telefone && <div>📞 {c.telefone}</div>}
-                {c.cidade && <div>📍 {c.cidade}</div>}
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontSize: ".82rem", color: c._m.total > 0 ? "#ffbf00" : "#3a3a3a", fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{fmt(c._m.total)}</div>
+                <div style={{ fontSize: ".68rem", color: "#444" }}>{c._m.pedidos} pedido{c._m.pedidos !== 1 ? "s" : ""}</div>
               </div>
-
-              {(Number(c.indicacoes_ativas) > 0 || Number(c.desconto_pendente) > 0) && (
-                <div style={{ marginTop: 10, padding: "8px 10px", background: "#111", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontSize: ".7rem", color: "#555", marginBottom: 2 }}>Indicações ativas</div>
-                    <div style={{ fontSize: ".88rem", fontWeight: 700, color: "#e0e0e0" }}>{Number(c.indicacoes_ativas) || 0} indicação(ões)</div>
-                  </div>
-                  {Number(c.desconto_pendente) > 0 && (
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: ".7rem", color: "#555", marginBottom: 2 }}>Desconto disponível</div>
-                      <div style={{ fontSize: "1rem", fontWeight: 700, color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{c.desconto_pendente}%</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {m.pedidos > 0 && (
-                <div style={{ display: "flex", gap: 8, marginTop: 10, padding: "8px 10px", background: "#111", borderRadius: 8 }}>
-                  <div style={{ flex: 1, textAlign: "center" }}>
-                    <div style={{ fontSize: ".7rem", color: "#555" }}>Total</div>
-                    <div style={{ fontSize: ".88rem", fontWeight: 700, color: "#ffbf00", fontFamily: "'DM Mono',monospace" }}>{fmt(m.total)}</div>
-                  </div>
-                  <div style={{ width: 1, background: "#222" }} />
-                  <div style={{ flex: 1, textAlign: "center" }}>
-                    <div style={{ fontSize: ".7rem", color: "#555" }}>Pedidos</div>
-                    <div style={{ fontSize: ".88rem", fontWeight: 700, color: "#e0e0e0" }}>{m.pedidos}</div>
-                  </div>
-                </div>
-              )}
-              {limCred > 0 && (
-                <div style={{ marginTop: 10, padding: "8px 10px", background: "#111", borderRadius: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".7rem", marginBottom: 6 }}>
-                    <span style={{ color: "#555" }}>Limite de crédito</span>
-                    <span style={{ color: corCred, fontFamily: "'DM Mono',monospace" }}>{fmt(pendente)} / {fmt(limCred)}</span>
-                  </div>
-                  <div style={{ background: "#1a1a1a", borderRadius: 4, height: 5, overflow: "hidden" }}>
-                    <div style={{ width: `${pctCred}%`, height: "100%", background: corCred, borderRadius: 4, transition: "width .3s" }} />
-                  </div>
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
-                <button style={{ ...btn("ghost"), padding: "5px 10px", fontSize: ".75rem" }} onClick={() => abrir(c)}><Icon name="pencil" size={12} /> Editar</button>
-                <button style={{ ...btn("ghost"), padding: "5px 10px", fontSize: ".75rem" }} onClick={() => setHistorico(c)}><Icon name="history" size={12} /> Histórico</button>
-                {Number(c.desconto_pendente) > 0 && (
-                  <button style={{ ...btn("primary"), padding: "5px 10px", fontSize: ".75rem" }} onClick={() => usarDesconto(c)}>
-                    Usar {c.desconto_pendente}%
-                  </button>
-                )}
-                <button style={{ ...btn("danger"), padding: "5px 10px", fontSize: ".75rem" }} onClick={() => excluir(c.id)}><Icon name="trash" size={12} /></button>
-              </div>
-            </div>
+            </button>
           );
         })}
-        {lista.length === 0 && <div style={{ color: "#555", padding: "2rem", gridColumn: "1/-1", textAlign: "center" }}>Nenhum cliente encontrado</div>}
       </div>
+    </div>
+  );
+
+  const detalhePane = (() => {
+    if (!sel) return (
+      <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 320 }}>
+        <EmptyState iconName="users" title="Selecione um cliente" subtitle="Clique em um cliente na lista para ver detalhes, pedidos e crédito" />
+      </div>
+    );
+    const m = metricas(sel.id);
+    const pendente = pendenteCli(sel.id);
+    const limCred = Number(sel.limite_credito) || 0;
+    const pctCred = limCred > 0 ? Math.min(pendente / limCred * 100, 100) : 0;
+    const corCred = pctCred >= 90 ? "#e05a5a" : pctCred >= 70 ? "#e8a020" : "#4caf82";
+    const tier = calcTier(Number(sel.indicacoes_ativas) || 0);
+    const indicador = sel.indicado_por ? clientes.find(x => x.id === sel.indicado_por) : null;
+    const inadim = inadimplente(sel.id);
+    const wa = waLink(sel.telefone);
+    const pedidos = vcli(sel.id);
+
+    return (
+      <div style={{ ...card, padding: "1.25rem", minWidth: 0 }}>
+        {isMobile && (
+          <button onClick={() => setSelId(null)} style={{ ...btn("ghost"), padding: "5px 10px", fontSize: ".75rem", marginBottom: 12 }}>
+            <span style={{ display: "inline-flex", transform: "rotate(180deg)" }}><Icon name="chevron" size={12} /></span> Voltar
+          </button>
+        )}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.25rem", color: "#e8e4d8" }}>{sel.nome}</span>
+              <Badge color={tipoCor[sel.tipo] || "#4caf82"}>{sel.tipo}</Badge>
+              {tier && <Badge color={tier.cor}>{tier.nome}</Badge>}
+              {inadim && <Badge color="#e05a5a">Inadimplente</Badge>}
+            </div>
+            {indicador && <div style={{ fontSize: ".72rem", color: "#555", marginTop: 4 }}>Indicado por {indicador.nome}</div>}
+          </div>
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            <button style={{ ...btn("ghost"), padding: "6px 10px", fontSize: ".75rem" }} onClick={() => abrir(sel)}><Icon name="pencil" size={13} /> Editar</button>
+            <button style={{ ...btn("danger"), padding: "6px 10px", fontSize: ".75rem" }} onClick={() => excluir(sel.id)}><Icon name="trash" size={13} /></button>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "1.25rem", flexWrap: "wrap", marginBottom: 16, fontSize: ".8rem", color: "#888" }}>
+          {sel.contato && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ color: "#555", display: "flex" }}><Icon name="users" size={13} /></span>{sel.contato}</span>}
+          {sel.telefone && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ color: "#555", display: "flex" }}><Icon name="phone" size={13} /></span>{sel.telefone}</span>}
+          {sel.cidade && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ color: "#555", display: "flex" }}><Icon name="pin" size={13} /></span>{sel.cidade}</span>}
+          {wa && (
+            <a href={wa} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#4caf82", textDecoration: "none", fontWeight: 600 }}>
+              <Icon name="chat" size={13} /> WhatsApp
+            </a>
+          )}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 0, border: "1px solid #1d1d1d", borderRadius: 10, overflow: "hidden", marginBottom: 14 }}>
+          {[{ label: "Total gasto", value: fmt(m.total), cor: "#ffbf00" }, { label: "Pedidos", value: m.pedidos, cor: "#e8e4d8" }, { label: "Ticket médio", value: fmt(m.ticket), cor: "#c9a84c" }].map((s, i) => (
+            <div key={i} style={{ padding: "12px 14px", borderLeft: i > 0 ? "1px solid #1d1d1d" : "none", background: "#121212" }}>
+              <div style={{ fontSize: ".62rem", color: "#555", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 5 }}>{s.label}</div>
+              <div style={{ fontSize: "1rem", fontWeight: 700, color: s.cor, fontFamily: "'DM Mono',monospace" }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {limCred > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".72rem", marginBottom: 6 }}>
+              <span style={{ color: "#555", textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".62rem" }}>Limite de crédito</span>
+              <span style={{ color: corCred, fontFamily: "'DM Mono',monospace" }}>{fmt(pendente)} / {fmt(limCred)}</span>
+            </div>
+            <div style={{ background: "#1c1c1c", borderRadius: 4, height: 6, overflow: "hidden" }}>
+              <div style={{ width: `${pctCred}%`, height: "100%", background: corCred, borderRadius: 4, transition: "width .3s" }} />
+            </div>
+          </div>
+        )}
+
+        {(Number(sel.indicacoes_ativas) > 0 || Number(sel.desconto_pendente) > 0) && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 14px", border: "1px solid #1e3a2a", background: "rgba(76,175,130,.05)", borderRadius: 10, marginBottom: 14, flexWrap: "wrap" }}>
+            <div style={{ fontSize: ".8rem", color: "#888" }}>
+              <b style={{ color: "#e0e0e0" }}>{Number(sel.indicacoes_ativas) || 0}</b> indicaç{Number(sel.indicacoes_ativas) === 1 ? "ão" : "ões"} ativa{Number(sel.indicacoes_ativas) === 1 ? "" : "s"}
+              {Number(sel.desconto_pendente) > 0 && <> · desconto de <b style={{ color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{sel.desconto_pendente}%</b> disponível</>}
+            </div>
+            {Number(sel.desconto_pendente) > 0 && (
+              <button style={{ ...btn("primary"), padding: "6px 12px", fontSize: ".75rem" }} onClick={() => usarDesconto(sel)}>Usar {sel.desconto_pendente}%</button>
+            )}
+          </div>
+        )}
+
+        <div style={{ fontSize: ".62rem", color: "#555", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 600, margin: "0 0 10px" }}>Pedidos</div>
+        {pedidos.length === 0 && <div style={{ color: "#444", fontSize: ".82rem" }}>Nenhuma venda registrada</div>}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {pedidos.map((v, i) => (
+            <div key={v.id} style={{ borderTop: i > 0 ? "1px solid #1c1c1c" : "none" }}>
+              <button onClick={() => setDetalheVenda(detalheVenda?.id === v.id ? null : v)}
+                style={{ width: "100%", background: "transparent", border: "none", padding: "10px 2px", cursor: "pointer", color: "inherit", textAlign: "left" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                      <span style={{ fontSize: ".75rem", fontFamily: "'DM Mono',monospace", color: "#555" }}>#{String(v.id).slice(-4)}</span>
+                      <span style={{ fontSize: ".68rem", padding: "1px 8px", borderRadius: 4, background: (statusCor[v.status] || "#555") + "22", color: statusCor[v.status] || "#888" }}>{v.status}</span>
+                    </div>
+                    <div style={{ fontSize: ".72rem", color: "#555" }}>{v.data} · {(v.venda_itens || []).length} item(s)</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    <span style={{ fontSize: ".9rem", fontWeight: 700, color: "#e0e0e0", fontFamily: "'DM Mono',monospace" }}>{fmt(v.total)}</span>
+                    <span style={{ color: "#555", display: "flex", transform: detalheVenda?.id === v.id ? "rotate(90deg)" : "none", transition: ".2s" }}><Icon name="chevron" size={14} /></span>
+                  </div>
+                </div>
+              </button>
+              {detalheVenda?.id === v.id && (
+                <div style={{ background: "#101010", borderRadius: 8, padding: "8px 12px", marginBottom: 8 }}>
+                  {(v.venda_itens || []).map((it, j) => { const p = produtos.find(x => x.id === it.produto_id); return (
+                    <div key={j} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "4px 0", borderBottom: j < (v.venda_itens || []).length - 1 ? "1px solid #1a1a1a" : "none", fontSize: ".8rem" }}>
+                      <span style={{ color: "#ccc", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p?.nome ?? "Produto removido"}</span>
+                      <span style={{ color: "#888", fontFamily: "'DM Mono',monospace", flexShrink: 0 }}>{it.quantidade}x {fmt(it.preco)}</span>
+                    </div>
+                  ); })}
+                  {(v.venda_itens || []).length === 0 && <div style={{ color: "#444", fontSize: ".78rem" }}>Sem itens</div>}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  })();
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Clientes</h2>
+          <div style={{ fontSize: ".74rem", color: "#555", marginTop: 2 }}>
+            {clientes.length} cadastrado{clientes.length !== 1 ? "s" : ""}{qtdInadim > 0 && <> · <span style={{ color: "#e05a5a" }}>{qtdInadim} inadimplente{qtdInadim > 1 ? "s" : ""}</span></>}
+          </div>
+        </div>
+        <button style={btn("primary")} onClick={() => abrir()}><Icon name="plus" size={14} /> Novo Cliente</button>
+      </div>
+
+      {isMobile
+        ? (sel ? detalhePane : listaPane)
+        : (
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(300px,2fr) 3fr", gap: 14, alignItems: "start" }}>
+            <div style={{ position: "sticky", top: 0, maxHeight: "calc(100dvh - 180px)", display: "flex" }}>{listaPane}</div>
+            {detalhePane}
+          </div>
+        )}
 
       {modal && (
         <Modal title={editando ? "Editar Cliente" : "Novo Cliente"} onClose={() => setModal(false)}>
@@ -209,7 +330,7 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem" }}>
             <Field label="Tipo">
               <select style={inp} value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
-                {["Barbearia", "Salão", "Distribuidor", "Outros"].map(t => <option key={t}>{t}</option>)}
+                {TIPOS.map(t => <option key={t}>{t}</option>)}
               </select>
             </Field>
             <Field label="Limite de Crédito (R$)">
@@ -231,60 +352,9 @@ const Clientes = ({ clientes, setClientes, vendas, produtos, contasReceber, noti
         </Modal>
       )}
 
-      {historico && (
-        <Modal title={`Histórico — ${historico.nome}`} onClose={() => { setHistorico(null); setDetalheVenda(null); }} wide>
-          {(() => { const m = metricas(historico.id); return (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: "1.25rem" }}>
-              {[{ label: "Total gasto", value: fmt(m.total) }, { label: "Pedidos", value: m.pedidos }, { label: "Ticket médio", value: fmt(m.ticket) }].map((s, i) => (
-                <div key={i} style={{ background: "#111", borderRadius: 8, padding: "10px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#ffbf00", fontFamily: "'DM Mono',monospace" }}>{s.value}</div>
-                </div>
-              ))}
-            </div>
-          ); })()}
-          <div style={{ fontSize: ".72rem", color: "#555", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: ".75rem" }}>Pedidos</div>
-          {vcli(historico.id).length === 0 && <div style={{ color: "#444", fontSize: ".88rem", padding: ".5rem 0" }}>Nenhuma venda registrada</div>}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {vcli(historico.id).map(v => (
-              <div key={v.id}>
-                <button onClick={() => setDetalheVenda(detalheVenda?.id === v.id ? null : v)}
-                  style={{ width: "100%", background: "#111", border: "1px solid #2a2a2a", borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: "inherit", textAlign: "left" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                        <span style={{ fontSize: ".8rem", fontFamily: "'DM Mono',monospace", color: "#555" }}>#{String(v.id).slice(-4)}</span>
-                        <span style={{ fontSize: ".72rem", padding: "1px 8px", borderRadius: 4, background: (statusCor[v.status] || "#555") + "22", color: statusCor[v.status] || "#888" }}>{v.status}</span>
-                      </div>
-                      <div style={{ fontSize: ".78rem", color: "#555" }}>{v.data} · {(v.venda_itens || []).length} item(s)</div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: "1rem", fontWeight: 700, color: "#e0e0e0", fontFamily: "'DM Mono',monospace" }}>{fmt(v.total)}</span>
-                      <span style={{ color: "#555", transform: detalheVenda?.id === v.id ? "rotate(90deg)" : "none", transition: ".2s" }}><Icon name="chevron" size={14} /></span>
-                    </div>
-                  </div>
-                </button>
-                {detalheVenda?.id === v.id && (
-                  <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderTop: "none", borderRadius: "0 0 8px 8px", padding: "10px 14px" }}>
-                    {(v.venda_itens || []).map((it, i) => { const p = produtos.find(x => x.id === it.produto_id); return (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #1a1a1a" }}>
-                        <span style={{ color: "#ccc" }}>{p?.nome ?? "Produto removido"}</span>
-                        <span style={{ color: "#888", fontFamily: "'DM Mono',monospace" }}>{it.quantidade}x {fmt(it.preco)}</span>
-                      </div>
-                    ); })}
-                    {(v.venda_itens || []).length === 0 && <div style={{ color: "#444", fontSize: ".82rem" }}>Sem itens</div>}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Modal>
-      )}
       {confirmState && <Confirm msg={confirmState.msg} danger={confirmState.danger !== false} onConfirm={() => { confirmState.onConfirm(); setConfirmState(null); }} onCancel={() => setConfirmState(null)} />}
     </div>
   );
 };
 
 export default Clientes;
-
-

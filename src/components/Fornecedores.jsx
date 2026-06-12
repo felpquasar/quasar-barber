@@ -38,7 +38,7 @@ const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) =>
         setFornecedores(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
       }
       setModal(false);
-      notify(editando ? "Fornecedor atualizado!" : "Fornecedor cadastrado!");
+      notify(editando ? "Fornecedor atualizado." : "Fornecedor cadastrado.");
     } finally { setSaving(false); }
   };
 
@@ -72,7 +72,7 @@ const Fornecedores = ({ fornecedores, setFornecedores, contasPagar, notify }) =>
         {lista.map(f => {
           const pendente = totalPendente(f.id);
           return (
-            <div key={f.id} style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
+            <div key={f.id} style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, padding: "1.25rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: ".75rem" }}>
                 <span style={{ fontWeight: 600, color: "#e0e0e0", fontSize: "1rem" }}>{f.nome}</span>
                 <span style={{ color: "#333" }}><Icon name="truck" size={16} /></span>

@@ -34,3 +34,6 @@ workflow-*.json
 contexto-compactado-*.md
 recovery_*.sql
 .vercel
+
+.playwright-mcp/
+/*.png

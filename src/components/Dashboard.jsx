@@ -1,51 +1,131 @@
 import { useState, useMemo } from 'react';
-import { fmt, today } from '../lib/utils';
+import { fmt, today, addDays } from '../lib/utils';
+import { useMobile } from '../hooks/useMobile';
 import Icon from './ui/Icon';
 import LineAreaChart from './LineAreaChart';
 
-const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, contasPagar, despesas, reload }) => {
+const card = { background: "#141414", border: "1px solid #1f1f1f", borderRadius: 14, padding: "1.25rem" };
+
+const CardHead = ({ title, action, onAction }) => (
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+    <span style={{ fontSize: ".68rem", color: "#666", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 600 }}>{title}</span>
+    {action && (
+      <button onClick={onAction} style={{ background: "none", border: "none", color: "#c9a84c", fontSize: ".65rem", textTransform: "uppercase", letterSpacing: ".08em", cursor: "pointer", fontWeight: 600, padding: 0 }}>
+        {action} →
+      </button>
+    )}
+  </div>
+);
+
+const Delta = ({ pct, suffix }) => {
+  if (pct === null || !isFinite(pct)) return null;
+  const up = pct >= 0;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: up ? "rgba(76,175,130,.12)" : "rgba(224,90,90,.12)", color: up ? "#4caf82" : "#e05a5a", borderRadius: 6, padding: "3px 8px", fontSize: ".7rem", fontFamily: "'DM Mono',monospace", fontWeight: 600, whiteSpace: "nowrap" }}>
+      {up ? "↑" : "↓"} {Math.abs(pct).toFixed(1)}%{suffix ? ` ${suffix}` : ""}
+    </span>
+  );
+};
+
+const Sparkline = ({ values, color = "#ffbf00", w = 64, h = 20 }) => {
+  if (!values || values.length < 2 || values.every(v => v === 0)) return <div style={{ width: w, height: h }} />;
+  const max = Math.max(...values), min = Math.min(...values);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => `${(i / (values.length - 1)) * w},${h - 2 - ((v - min) / range) * (h - 4)}`).join(" ");
+  return (
+    <svg width={w} height={h} style={{ flexShrink: 0, display: "block" }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity=".85" />
+    </svg>
+  );
+};
+
+const Pill = ({ children, color, bg }) => (
+  <span style={{ background: bg, color, borderRadius: 6, padding: "2px 8px", fontSize: ".68rem", fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>{children}</span>
+);
+
+const rowStyle = (last) => ({ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: last ? "none" : "1px solid #1c1c1c" });
+
+const CAT_CORES = ["#e05a5a", "#e8a020", "#b86fcf", "#6b9fd4", "#4caf82", "#c9a84c", "#888"];
+
+const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, contasPagar, despesas, reload, onNavigate }) => {
   const [periodo, setPeriodo] = useState("mes");
+  const isMobile = useMobile();
   const agora = new Date();
   const mesAtual = agora.toISOString().slice(0, 7);
   const semanaAtras = new Date(agora - 7 * 86400000).toISOString().split("T")[0];
+  const duasSemanas = new Date(agora - 14 * 86400000).toISOString().split("T")[0];
   const trimestre = new Date(agora - 90 * 86400000).toISOString().split("T")[0];
+  const semestre = new Date(agora - 180 * 86400000).toISOString().split("T")[0];
+  const dAnt = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
+  const mesAnterior = `${dAnt.getFullYear()}-${String(dAnt.getMonth() + 1).padStart(2, "0")}`;
 
   const fp = periodo === "mes" ? v => v.data?.startsWith(mesAtual)
     : periodo === "semana" ? v => v.data >= semanaAtras
     : v => v.data >= trimestre;
 
+  const fpPrev = periodo === "mes" ? v => v.data?.startsWith(mesAnterior)
+    : periodo === "semana" ? v => v.data >= duasSemanas && v.data < semanaAtras
+    : v => v.data >= semestre && v.data < trimestre;
+
   const vp = vendas.filter(fp);
+  const vpPrev = vendas.filter(fpPrev);
   const fat = vp.reduce((a, v) => a + Number(v.total), 0);
+  const fatPrev = vpPrev.reduce((a, v) => a + Number(v.total), 0);
   const tkt = vp.length > 0 ? fat / vp.length : 0;
+
+  const lucroDe = (lista, total) => {
+    let custo = 0;
+    lista.forEach(v => (v.venda_itens || []).forEach(it => {
+      const prod = produtos.find(p => p.id === it.produto_id);
+      if (prod) custo += Number(prod.custo || 0) * Number(it.quantidade || 0);
+    }));
+    return total - custo;
+  };
+
+  const lucroPeriodo = useMemo(() => lucroDe(vp, fat), [vp, fat]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lucroPrev = useMemo(() => lucroDe(vpPrev, fatPrev), [vpPrev, fatPrev]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const deltaFat = fatPrev > 0 ? ((fat - fatPrev) / fatPrev) * 100 : null;
+  const deltaLucro = lucroPrev > 0 ? ((lucroPeriodo - lucroPrev) / lucroPrev) * 100 : null;
 
   const custoEstoque = useMemo(
     () => produtos.reduce((a, p) => a + Number(p.custo || 0) * Number(p.estoque || 0), 0),
     [produtos]
   );
 
-  const lucroPeriodo = useMemo(() => {
-    let custoVendido = 0;
-    vp.forEach(v => {
-      (v.venda_itens || []).forEach(it => {
-        const prod = produtos.find(p => p.id === it.produto_id);
-        if (prod) custoVendido += Number(prod.custo || 0) * Number(it.quantidade || 0);
-      });
-    });
-    return fat - custoVendido;
-  }, [vp, produtos, fat]);
-
-  const baixo = produtos.filter(p => p.estoque < 10);
+  const baixo = useMemo(
+    () => produtos.filter(p => p.estoque < 10).sort((a, b) => a.estoque - b.estoque),
+    [produtos]
+  );
 
   const contasVencidas = useMemo(() => {
     if (!contasReceber) return [];
-    return contasReceber.filter(cr => cr.status !== "pago" && cr.data_vencimento < today());
+    return contasReceber
+      .filter(cr => cr.status !== "pago" && cr.data_vencimento < today())
+      .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
   }, [contasReceber]);
 
   const totalVencido = contasVencidas.reduce((a, c) => a + Number(c.valor), 0);
   const totalAReceber = (contasReceber || []).filter(cr => cr.status !== "pago").reduce((a, c) => a + Number(c.valor), 0);
 
+  const proximos = useMemo(() => {
+    const lim = addDays(today(), 14);
+    return [
+      ...(contasReceber || []).filter(c => c.status !== "pago" && c.data_vencimento >= today() && c.data_vencimento <= lim)
+        .map(c => ({ ...c, tipo: "receber", nome: clientes.find(x => x.id === c.cliente_id)?.nome || c.descricao || "Cobrança" })),
+      ...(contasPagar || []).filter(c => c.status !== "pago" && c.data_vencimento >= today() && c.data_vencimento <= lim)
+        .map(c => ({ ...c, tipo: "pagar", nome: c.descricao || "Conta" })),
+    ].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)).slice(0, 6);
+  }, [contasReceber, contasPagar, clientes]);
+
   const dp = (despesas || []).filter(fp);
   const totalDespesas = dp.reduce((a, d) => a + Number(d.valor), 0);
+
+  const despPorCat = useMemo(() => {
+    const m = {};
+    dp.forEach(d => { const k = d.categoria || "outros"; m[k] = (m[k] || 0) + Number(d.valor); });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  }, [dp]);
 
   const saldoCaixa = useMemo(() => {
     const entradas = vendas.filter(v => v.status !== "cancelado").reduce((a, v) => a + Number(v.total), 0);
@@ -53,6 +133,15 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
     const saidasDesp = (despesas || []).reduce((a, d) => a + Number(d.valor), 0);
     return entradas - saidasCP - saidasDesp;
   }, [vendas, contasPagar, despesas]);
+
+  const diasPeriodo = useMemo(() => [...new Set(vp.map(v => v.data).filter(Boolean))].sort(), [vp]);
+
+  const sparkProd = (id) => diasPeriodo.map(d =>
+    vp.filter(v => v.data === d).reduce((a, v) => a + (v.venda_itens || []).filter(it => it.produto_id === id).reduce((s, it) => s + Number(it.quantidade), 0), 0)
+  );
+  const sparkCli = (id) => diasPeriodo.map(d =>
+    vp.filter(v => v.data === d && v.cliente_id === id).reduce((a, v) => a + Number(v.total), 0)
+  );
 
   const topProd = useMemo(() => {
     const m = {};
@@ -101,7 +190,15 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
     }
   }, [vp, periodo]);
 
-  const labelPeriodo = periodo === "mes" ? "do Mês" : periodo === "semana" ? "da Semana" : "do Trimestre";
+  const labelPeriodo = periodo === "mes" ? "do mês" : periodo === "semana" ? "da semana" : "do trimestre";
+  const labelAnterior = periodo === "mes" ? "vs mês anterior" : periodo === "semana" ? "vs semana anterior" : "vs trimestre anterior";
+
+  const diasAte = (data) => Math.round((new Date(data + "T12:00:00") - new Date(today() + "T12:00:00")) / 86400000);
+  const diasAtraso = (data) => Math.round((new Date(today() + "T12:00:00") - new Date(data + "T12:00:00")) / 86400000);
+  const fmtDia = (data) => { const d = diasAte(data); return d === 0 ? "hoje" : d === 1 ? "amanhã" : `em ${d} dias`; };
+
+  const grid3 = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(290px,1fr))", gap: 14, marginBottom: 14 };
+  const custoVendido = fat - lucroPeriodo;
 
   return (
     <div>
@@ -109,160 +206,222 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Dashboard</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {["semana", "mes", "trimestre"].map(p => (
-            <button key={p} onClick={() => setPeriodo(p)} style={{ padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer", background: periodo === p ? "#ffbf00" : "#1a1a1a", color: periodo === p ? "#0a0a08" : "#888", fontSize: ".8rem", fontWeight: periodo === p ? 700 : 400 }}>
+            <button key={p} onClick={() => setPeriodo(p)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", background: periodo === p ? "#ffbf00" : "#1a1a1a", color: periodo === p ? "#0a0a08" : "#888", fontSize: ".8rem", fontWeight: periodo === p ? 700 : 400 }}>
               {p === "mes" ? "Mês" : p === "semana" ? "Semana" : "Trimestre"}
             </button>
           ))}
-          <button onClick={reload} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #2a2a2a", background: "none", color: "#666", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: ".8rem" }}>
+          <button onClick={reload} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #2a2a2a", background: "none", color: "#666", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: ".8rem" }}>
             <Icon name="refresh" size={14} /> Atualizar
           </button>
         </div>
       </div>
 
-      {/* Saldo */}
-      <div style={{ background: saldoCaixa >= 0 ? "#0d1f14" : "#1f0d0d", border: `1px solid ${saldoCaixa >= 0 ? "#1e4a2a" : "#5a1a1a"}`, borderRadius: 6, padding: "1.25rem 1.5rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <div>
-          <div style={{ fontSize: ".72rem", color: "#555", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Saldo no Caixa</div>
-          <div style={{ fontSize: "2rem", fontWeight: 700, color: saldoCaixa >= 0 ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(saldoCaixa)}</div>
-        </div>
-        <div style={{ fontSize: ".75rem", color: "#444", textAlign: "right", lineHeight: 1.7 }}>
-          <div>Vendas: <span style={{ color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{fmt(vendas.filter(v => v.status !== "cancelado").reduce((a, v) => a + Number(v.total), 0))}</span></div>
-          <div>Fornecedores: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt((contasPagar || []).filter(cp => cp.status === "pago").reduce((a, c) => a + Number(c.valor), 0))}</span></div>
-          <div>Despesas: <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt((despesas || []).reduce((a, d) => a + Number(d.valor), 0))}</span></div>
-        </div>
-      </div>
-
-      {/* Hero Faturamento */}
-      <div style={{ background: "#0e0d00", border: "1px solid #1e1b00", borderRadius: 8, padding: "1.5rem 2rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-        <div>
-          <div style={{ fontSize: ".68rem", color: "#5a4a00", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Faturamento {labelPeriodo}</div>
-          <div style={{ fontSize: "2.8rem", fontWeight: 700, color: "#ffbf00", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(fat)}</div>
-          {fat > 0 && <div style={{ fontSize: ".75rem", color: lucroPeriodo >= 0 ? "#4caf82" : "#e05a5a", marginTop: 8, fontFamily: "'DM Mono',monospace" }}>{fmt(lucroPeriodo)} lucro · {((lucroPeriodo / fat) * 100).toFixed(1)}% margem</div>}
-        </div>
-        <div style={{ display: "flex", gap: "2.5rem" }}>
-          <div>
-            <div style={{ fontSize: ".68rem", color: "#5a4a00", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Ticket Médio</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#c9a84c", fontFamily: "'DM Mono',monospace" }}>{fmt(tkt)}</div>
+      {/* Hero: faturamento + chart | saldo + lucro */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", gap: 14, marginBottom: 14 }}>
+        <div style={{ ...card, minWidth: 0 }}>
+          <CardHead title={`Faturamento ${labelPeriodo}`} />
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
+            <span style={{ fontSize: "2.4rem", fontWeight: 700, color: "#ffbf00", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(fat)}</span>
+            <Delta pct={deltaFat} />
+            {deltaFat !== null && <span style={{ fontSize: ".7rem", color: "#555" }}>{labelAnterior}</span>}
           </div>
-          <div>
-            <div style={{ fontSize: ".68rem", color: "#5a4a00", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Vendas</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#6b9fd4", fontFamily: "'DM Mono',monospace" }}>{vp.length}</div>
+          <div style={{ display: "flex", gap: "1.75rem", margin: "12px 0 16px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: ".78rem", color: "#666" }}>Ticket médio <b style={{ color: "#c9a84c", fontFamily: "'DM Mono',monospace" }}>{fmt(tkt)}</b></span>
+            <span style={{ fontSize: ".78rem", color: "#666" }}>Vendas <b style={{ color: "#e8e4d8", fontFamily: "'DM Mono',monospace" }}>{vp.length}</b></span>
+            {fat > 0 && <span style={{ fontSize: ".78rem", color: "#666" }}>Margem <b style={{ color: lucroPeriodo >= 0 ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace" }}>{((lucroPeriodo / fat) * 100).toFixed(1)}%</b></span>}
           </div>
+          <LineAreaChart dados={grafico} />
         </div>
-      </div>
-
-      {/* Cards secundários */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, marginBottom: "1.5rem" }}>
-        <div style={{ background: "#161616", border: `1px solid ${lucroPeriodo >= 0 ? "#1e3a2a" : "#3a1e1e"}`, borderRadius: 6, padding: "1.25rem" }}>
-          <div style={{ fontSize: "1.6rem", fontWeight: 700, color: lucroPeriodo >= 0 ? "#4caf82" : "#e05a5a", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(lucroPeriodo)}</div>
-          <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Lucro {labelPeriodo}</div>
-        </div>
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
-          <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#b86fcf", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(custoEstoque)}</div>
-          <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Custo do Estoque</div>
-          <div style={{ fontSize: ".7rem", color: "#555", marginTop: 4 }}>{produtos.length} produto(s)</div>
-        </div>
-        <div style={{ background: "#161616", border: `1px solid ${totalVencido > 0 ? "#5a1a1a" : "#2a2a2a"}`, borderRadius: 6, padding: "1.25rem" }}>
-          <div style={{ fontSize: "1.6rem", fontWeight: 700, color: totalVencido > 0 ? "#e05a5a" : "#e8a020", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(totalAReceber)}</div>
-          <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>A Receber</div>
-          {totalVencido > 0 && <div style={{ fontSize: ".7rem", color: "#e05a5a", marginTop: 4 }}>{fmt(totalVencido)} em atraso</div>}
-        </div>
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
-          <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#e05a5a", lineHeight: 1, fontFamily: "'DM Mono',monospace" }}>{fmt(totalDespesas)}</div>
-          <div style={{ fontSize: ".75rem", color: "#777", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Despesas {labelPeriodo}</div>
-          <div style={{ fontSize: ".7rem", color: "#555", marginTop: 4 }}>Anúncios · Marketing · Frete</div>
-        </div>
-      </div>
-
-      {contasVencidas.length > 0 && (
-        <div style={{ background: "#1f0d0d", border: "1px solid #5a1a1a", borderRadius: 8, padding: ".75rem 1rem", marginBottom: ".75rem", display: "flex", alignItems: "center", gap: 10, color: "#e05a5a" }}>
-          <Icon name="warn" size={20} />
-          <span style={{ fontSize: ".9rem" }}>
-            <b>{contasVencidas.length} cobrança{contasVencidas.length > 1 ? "s" : ""} em atraso</b>
-            {" · "}{fmt(totalVencido)} pendente{contasVencidas.length > 1 ? "s" : ""}
-          </span>
-        </div>
-      )}
-      {baixo.length > 0 && (
-        <div style={{ background: "#1f1409", border: "1px solid #5a3a0a", borderRadius: 8, padding: ".75rem 1rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: 10, color: "#e8a020" }}>
-          <Icon name="warn" size={20} />
-          <span style={{ fontSize: ".9rem" }}><b>{baixo.length} produto(s)</b> com estoque baixo (menos de 10 unidades)</span>
-        </div>
-      )}
-
-      {/* Gráfico */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem", marginBottom: "1.5rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-          <div>
-            <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Evolução de Vendas</div>
-            <div style={{ fontSize: ".95rem", fontWeight: 600, color: "#e8e4d8", marginTop: 2 }}>
-              {periodo === "mes" ? "Dia a dia do mês" : periodo === "semana" ? "Dias da semana" : "Meses do trimestre"}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
+          <div style={{ ...card, flex: 1 }}>
+            <CardHead title="Saldo no caixa" action="Fluxo" onAction={() => onNavigate?.("financeiro")} />
+            <div style={{ fontSize: "1.8rem", fontWeight: 700, color: saldoCaixa >= 0 ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace", lineHeight: 1, marginBottom: 12 }}>{fmt(saldoCaixa)}</div>
+            <div style={{ fontSize: ".74rem", color: "#555", lineHeight: 1.9 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Vendas (total)</span><span style={{ color: "#4caf82", fontFamily: "'DM Mono',monospace" }}>{fmt(vendas.filter(v => v.status !== "cancelado").reduce((a, v) => a + Number(v.total), 0))}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Fornecedores</span><span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt((contasPagar || []).filter(cp => cp.status === "pago").reduce((a, c) => a + Number(c.valor), 0))}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Despesas</span><span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace" }}>−{fmt((despesas || []).reduce((a, d) => a + Number(d.valor), 0))}</span></div>
             </div>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: ".85rem", color: "#ffbf00", fontFamily: "'DM Mono',monospace", fontWeight: 700 }}>{fmt(fat)}</div>
-            <div style={{ fontSize: ".72rem", color: "#555", marginTop: 2 }}>{vp.length} venda{vp.length !== 1 ? "s" : ""} no período</div>
+          <div style={{ ...card, flex: 1 }}>
+            <CardHead title={`Lucro ${labelPeriodo}`} />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: "1.8rem", fontWeight: 700, color: lucroPeriodo >= 0 ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(lucroPeriodo)}</span>
+              <Delta pct={deltaLucro} />
+            </div>
+            <div style={{ fontSize: ".72rem", color: "#555", marginTop: 10 }}>A receber <b style={{ color: totalVencido > 0 ? "#e05a5a" : "#e8e4d8", fontFamily: "'DM Mono',monospace" }}>{fmt(totalAReceber)}</b>{totalVencido > 0 && <> · <span style={{ color: "#e05a5a" }}>{fmt(totalVencido)} em atraso</span></>}</div>
           </div>
         </div>
-        <LineAreaChart dados={grafico} />
       </div>
 
-      {/* Top produtos e clientes */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: "1.5rem", marginBottom: "1.5rem" }}>
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
-          <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Top Produtos</div>
-          <div style={{ fontSize: ".95rem", fontWeight: 600, color: "#e8e4d8", marginBottom: "1rem", marginTop: 4 }}>Mais vendidos</div>
-          {topProd.length === 0 && <div style={{ color: "#444", fontSize: ".85rem" }}>Sem dados no período</div>}
-          {topProd.map((tp, i) => { const p = produtos.find(x => x.id === tp.id); return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < topProd.length - 1 ? "1px solid #141414" : "none" }}>
-              <span style={{ fontSize: ".78rem", fontFamily: "'DM Mono',monospace", color: i === 0 ? "#ffbf00" : "#2a2a2a", width: 20, flexShrink: 0, fontWeight: 700 }}>#{i + 1}</span>
-              <span style={{ flex: 1, fontSize: ".85rem", color: "#bbb", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p?.nome ?? `Produto #${tp.id}`}</span>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: ".82rem", color: "#ffbf00", fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{tp.qty} un</div>
-                <div style={{ fontSize: ".72rem", color: "#444" }}>{fmt(tp.valor)}</div>
+      {/* Pendências */}
+      <div style={grid3}>
+        <div style={card}>
+          <CardHead title="Cobranças em atraso" action="Ver todas" onAction={() => onNavigate?.("financeiro")} />
+          {contasVencidas.length === 0 && <div style={{ color: "#444", fontSize: ".82rem", padding: "8px 0" }}>Nenhuma cobrança em atraso</div>}
+          {contasVencidas.slice(0, 5).map((cr, i, arr) => {
+            const cli = clientes.find(c => c.id === cr.cliente_id);
+            return (
+              <div key={cr.id} style={rowStyle(i === arr.length - 1)}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: ".84rem", color: "#ddd", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cli?.nome ?? cr.descricao ?? "Cobrança"}</div>
+                  <div style={{ fontSize: ".7rem", color: "#555" }}>venceu {cr.data_vencimento}</div>
+                </div>
+                <Pill color="#e05a5a" bg="rgba(224,90,90,.12)">{diasAtraso(cr.data_vencimento)}d</Pill>
+                <span style={{ fontSize: ".82rem", color: "#e05a5a", fontFamily: "'DM Mono',monospace", fontWeight: 600, flexShrink: 0 }}>{fmt(cr.valor)}</span>
               </div>
+            );
+          })}
+          {contasVencidas.length > 0 && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1c1c1c", display: "flex", justifyContent: "space-between", fontSize: ".74rem", color: "#666" }}>
+              <span>{contasVencidas.length} pendência{contasVencidas.length > 1 ? "s" : ""}</span>
+              <span style={{ color: "#e05a5a", fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{fmt(totalVencido)}</span>
             </div>
-          ); })}
+          )}
         </div>
-        <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, padding: "1.25rem" }}>
-          <div style={{ fontSize: ".7rem", color: "#555", textTransform: "uppercase", letterSpacing: ".06em" }}>Top Clientes</div>
-          <div style={{ fontSize: ".95rem", fontWeight: 600, color: "#e8e4d8", marginBottom: "1rem", marginTop: 4 }}>Maiores compradores</div>
-          {topCli.length === 0 && <div style={{ color: "#444", fontSize: ".85rem" }}>Sem dados no período</div>}
-          {topCli.map((tc, i) => { const c = clientes.find(x => x.id === tc.id); return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < topCli.length - 1 ? "1px solid #141414" : "none" }}>
-              <div style={{ fontSize: ".78rem", color: i === 0 ? "#ffbf00" : "#2a2a2a", fontFamily: "'DM Mono',monospace", flexShrink: 0, fontWeight: 700, width: 20 }}>{i + 1}</div>
+
+        <div style={card}>
+          <CardHead title="Próximos 14 dias" action="Financeiro" onAction={() => onNavigate?.("financeiro")} />
+          {proximos.length === 0 && <div style={{ color: "#444", fontSize: ".82rem", padding: "8px 0" }}>Nenhum vencimento nos próximos 14 dias</div>}
+          {proximos.map((c, i, arr) => (
+            <div key={`${c.tipo}${c.id}`} style={rowStyle(i === arr.length - 1)}>
+              <span style={{ color: c.tipo === "receber" ? "#4caf82" : "#e05a5a", flexShrink: 0, display: "flex" }}>
+                <Icon name={c.tipo === "receber" ? "down" : "up"} size={14} />
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: ".85rem", color: "#ccc", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c?.nome ?? `Cliente #${tc.id}`}</div>
-                <div style={{ fontSize: ".72rem", color: "#444" }}>{c?.cidade ?? ""} · {tc.pedidos} pedido(s)</div>
+                <div style={{ fontSize: ".84rem", color: "#ddd", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.nome}</div>
+                <div style={{ fontSize: ".7rem", color: "#555" }}>{c.tipo === "receber" ? "receber" : "pagar"} · {fmtDia(c.data_vencimento)}</div>
               </div>
-              <div style={{ fontSize: ".85rem", color: "#ffbf00", fontFamily: "'DM Mono',monospace", flexShrink: 0 }}>{fmt(tc.total)}</div>
+              <span style={{ fontSize: ".82rem", color: c.tipo === "receber" ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace", fontWeight: 600, flexShrink: 0 }}>
+                {c.tipo === "receber" ? "+" : "−"}{fmt(c.valor)}
+              </span>
             </div>
-          ); })}
+          ))}
+        </div>
+
+        <div style={card}>
+          <CardHead title="Estoque baixo" action="Estoque" onAction={() => onNavigate?.("estoque")} />
+          {baixo.length === 0 && <div style={{ color: "#444", fontSize: ".82rem", padding: "8px 0" }}>Nenhum produto abaixo de 10 unidades</div>}
+          {baixo.slice(0, 5).map((p, i, arr) => (
+            <div key={p.id} style={rowStyle(i === arr.length - 1)}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: ".84rem", color: "#ddd", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.nome}</div>
+                <div style={{ fontSize: ".7rem", color: "#555" }}>{p.categoria || "sem categoria"}</div>
+              </div>
+              <Pill color={p.estoque === 0 ? "#e05a5a" : "#e8a020"} bg={p.estoque === 0 ? "rgba(224,90,90,.12)" : "rgba(232,160,32,.12)"}>
+                {p.estoque} {p.unidade || "un"}
+              </Pill>
+            </div>
+          ))}
+          {baixo.length > 5 && <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1c1c1c", fontSize: ".74rem", color: "#666" }}>+ {baixo.length - 5} outro{baixo.length - 5 > 1 ? "s" : ""} produto{baixo.length - 5 > 1 ? "s" : ""}</div>}
+        </div>
+      </div>
+
+      {/* Rankings + resumo */}
+      <div style={grid3}>
+        <div style={card}>
+          <CardHead title="Top produtos" action="Relatórios" onAction={() => onNavigate?.("relatorios")} />
+          {topProd.length === 0 && <div style={{ color: "#444", fontSize: ".82rem", padding: "8px 0" }}>Sem vendas no período</div>}
+          {topProd.map((tp, i, arr) => {
+            const p = produtos.find(x => x.id === tp.id);
+            return (
+              <div key={tp.id} style={rowStyle(i === arr.length - 1)}>
+                <span style={{ fontSize: ".75rem", fontFamily: "'DM Mono',monospace", color: i === 0 ? "#ffbf00" : "#3a3a3a", width: 18, flexShrink: 0, fontWeight: 700 }}>{i + 1}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: ".84rem", color: "#ccc", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p?.nome ?? `Produto #${tp.id}`}</div>
+                  <div style={{ fontSize: ".7rem", color: "#555" }}>{fmt(tp.valor)}</div>
+                </div>
+                <Sparkline values={sparkProd(tp.id)} />
+                <span style={{ fontSize: ".8rem", color: "#ffbf00", fontFamily: "'DM Mono',monospace", fontWeight: 600, flexShrink: 0, minWidth: 44, textAlign: "right" }}>{tp.qty} un</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={card}>
+          <CardHead title="Top clientes" action="Clientes" onAction={() => onNavigate?.("clientes")} />
+          {topCli.length === 0 && <div style={{ color: "#444", fontSize: ".82rem", padding: "8px 0" }}>Sem vendas no período</div>}
+          {topCli.map((tc, i, arr) => {
+            const c = clientes.find(x => x.id === tc.id);
+            return (
+              <div key={tc.id} style={rowStyle(i === arr.length - 1)}>
+                <span style={{ fontSize: ".75rem", fontFamily: "'DM Mono',monospace", color: i === 0 ? "#ffbf00" : "#3a3a3a", width: 18, flexShrink: 0, fontWeight: 700 }}>{i + 1}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: ".84rem", color: "#ccc", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c?.nome ?? `Cliente #${tc.id}`}</div>
+                  <div style={{ fontSize: ".7rem", color: "#555" }}>{c?.cidade ? `${c.cidade} · ` : ""}{tc.pedidos} pedido{tc.pedidos > 1 ? "s" : ""}</div>
+                </div>
+                <Sparkline values={sparkCli(tc.id)} color="#4caf82" />
+                <span style={{ fontSize: ".8rem", color: "#ffbf00", fontFamily: "'DM Mono',monospace", flexShrink: 0, minWidth: 70, textAlign: "right" }}>{fmt(tc.total)}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={card}>
+          <CardHead title={`Resumo ${labelPeriodo}`} />
+          <div style={{ fontSize: ".72rem", color: "#555", marginBottom: 6, display: "flex", justifyContent: "space-between" }}>
+            <span>Entradas</span><span style={{ fontFamily: "'DM Mono',monospace", color: "#e8e4d8" }}>{fmt(fat)}</span>
+          </div>
+          <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", background: "#1c1c1c", marginBottom: 6 }}>
+            {fat > 0 && <>
+              <div style={{ width: `${Math.max((lucroPeriodo / fat) * 100, 0)}%`, background: "#4caf82" }} title={`Lucro ${fmt(lucroPeriodo)}`} />
+              <div style={{ width: `${Math.min((custoVendido / fat) * 100, 100)}%`, background: "#5a4a00" }} title={`Custo ${fmt(custoVendido)}`} />
+            </>}
+          </div>
+          <div style={{ display: "flex", gap: 14, fontSize: ".68rem", color: "#666", marginBottom: 16, flexWrap: "wrap" }}>
+            <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "#4caf82", marginRight: 5 }} />Lucro {fmt(lucroPeriodo)}</span>
+            <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "#5a4a00", marginRight: 5 }} />Custo {fmt(custoVendido)}</span>
+          </div>
+
+          <div style={{ fontSize: ".72rem", color: "#555", marginBottom: 6, display: "flex", justifyContent: "space-between" }}>
+            <span>Despesas</span><span style={{ fontFamily: "'DM Mono',monospace", color: totalDespesas > 0 ? "#e05a5a" : "#e8e4d8" }}>{fmt(totalDespesas)}</span>
+          </div>
+          {totalDespesas > 0 ? (
+            <>
+              <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", background: "#1c1c1c", marginBottom: 6 }}>
+                {despPorCat.map(([cat, val], i) => (
+                  <div key={cat} style={{ width: `${(val / totalDespesas) * 100}%`, background: CAT_CORES[i % CAT_CORES.length] }} title={`${cat} ${fmt(val)}`} />
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 12, fontSize: ".68rem", color: "#666", flexWrap: "wrap", marginBottom: 16 }}>
+                {despPorCat.slice(0, 4).map(([cat, val], i) => (
+                  <span key={cat}><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: CAT_CORES[i % CAT_CORES.length], marginRight: 5 }} />{cat} {fmt(val)}</span>
+                ))}
+              </div>
+            </>
+          ) : <div style={{ fontSize: ".74rem", color: "#444", marginBottom: 16 }}>Sem despesas no período</div>}
+
+          <div style={{ borderTop: "1px solid #1c1c1c", paddingTop: 12, fontSize: ".74rem", color: "#666", lineHeight: 2 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Custo do estoque</span><span style={{ fontFamily: "'DM Mono',monospace", color: "#e8e4d8" }}>{fmt(custoEstoque)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Produtos cadastrados</span><span style={{ fontFamily: "'DM Mono',monospace", color: "#e8e4d8" }}>{produtos.length}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>A receber (aberto)</span><span style={{ fontFamily: "'DM Mono',monospace", color: totalVencido > 0 ? "#e05a5a" : "#e8e4d8" }}>{fmt(totalAReceber)}</span></div>
+          </div>
         </div>
       </div>
 
       {/* Movimentos recentes */}
-      <h3 style={{ fontSize: ".75rem", color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: ".75rem" }}>Movimentos Recentes</h3>
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "hidden" }}>
-        {movimentos.slice(0, 6).map(m => { const p = produtos.find(x => x.id === m.produto_id); return (
-          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: ".9rem 1.25rem", borderBottom: "1px solid #1a1a1a" }}>
-            <div style={{ color: m.tipo === "entrada" ? "#4caf82" : "#e05a5a", flexShrink: 0 }}><Icon name={m.tipo === "entrada" ? "up" : "down"} size={16} /></div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: ".9rem", color: "#ddd" }}>{p?.nome ?? "Produto removido"}</div>
-              <div style={{ fontSize: ".75rem", color: "#555" }}>{m.obs || m.tipo} · {m.data}</div>
+      <div style={{ ...card, padding: 0 }}>
+        <div style={{ padding: "1.25rem 1.25rem 0" }}>
+          <CardHead title="Movimentos recentes" action="Estoque" onAction={() => onNavigate?.("estoque")} />
+        </div>
+        {movimentos.slice(0, 6).map(m => {
+          const p = produtos.find(x => x.id === m.produto_id);
+          return (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: ".8rem 1.25rem", borderTop: "1px solid #1a1a1a" }}>
+              <div style={{ color: m.tipo === "entrada" ? "#4caf82" : "#e05a5a", flexShrink: 0 }}><Icon name={m.tipo === "entrada" ? "up" : "down"} size={16} /></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: ".88rem", color: "#ddd", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p?.nome ?? "Produto removido"}</div>
+                <div style={{ fontSize: ".74rem", color: "#555" }}>{m.obs || m.tipo} · {m.data}</div>
+              </div>
+              <div style={{ fontSize: ".88rem", fontWeight: 600, color: m.tipo === "entrada" ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace" }}>
+                {m.tipo === "entrada" ? "+" : "-"}{m.quantidade} un
+              </div>
             </div>
-            <div style={{ fontSize: ".9rem", fontWeight: 600, color: m.tipo === "entrada" ? "#4caf82" : "#e05a5a", fontFamily: "'DM Mono',monospace" }}>
-              {m.tipo === "entrada" ? "+" : "-"}{m.quantidade} un
-            </div>
-          </div>
-        ); })}
-        {movimentos.length === 0 && <div style={{ padding: "1.5rem", color: "#555", textAlign: "center", fontSize: ".85rem" }}>Nenhum movimento registrado</div>}
+          );
+        })}
+        {movimentos.length === 0 && <div style={{ padding: "1.5rem", color: "#555", textAlign: "center", fontSize: ".85rem", borderTop: "1px solid #1a1a1a" }}>Nenhum movimento registrado</div>}
       </div>
     </div>
   );
 };
-
-
-// ── Estoque ───────────────────────────────────────────────────────
 
 export default Dashboard;

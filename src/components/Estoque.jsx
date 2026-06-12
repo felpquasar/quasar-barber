@@ -56,7 +56,7 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
     }
     setSaving(false);
     setProdutos(prev => prev.map(p => p.id === modalEdit.id ? data : p).sort((a, b) => a.nome.localeCompare(b.nome)));
-    setModalEdit(null); notify("Produto atualizado!");
+    setModalEdit(null); notify("Produto atualizado.");
   };
 
   const salvarProduto = async () => {
@@ -69,7 +69,7 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
     setSaving(false);
     if (error) { notify("Erro ao salvar produto", "error"); return; }
     setProdutos(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
-    setModalProd(false); setForm({ nome: "", categoria: "", unidade: "un", estoque: 0, custo: "", preco: "" }); notify("Produto cadastrado!");
+    setModalProd(false); setForm({ nome: "", categoria: "", unidade: "un", estoque: 0, custo: "", preco: "" }); notify("Produto cadastrado.");
   };
 
   const lancarMovimento = async () => {
@@ -83,7 +83,7 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
     if (me) { notify("Erro ao registrar movimento", "error"); return; }
     setProdutos(prev => prev.map(p => p.id === prod.id ? { ...p, estoque: novoEstoque } : p));
     setMovimentos(prev => [mov, ...prev]);
-    setModalMov(null); setMovForm({ tipo: "entrada", quantidade: "", obs: "", data: today() }); notify("Movimento registrado!");
+    setModalMov(null); setMovForm({ tipo: "entrada", quantidade: "", obs: "", data: today() }); notify("Movimento registrado.");
   };
 
   const excluir = (id) => {
@@ -166,7 +166,7 @@ td{padding:6px 10px;border-bottom:1px solid #eee}@media print{body{padding:0}}</
               <button style={btn("primary")} onClick={() => setModalProd(true)}><Icon name="plus" size={14} /> Novo Produto</button>
             </div>
           </div>
-          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
+          <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, overflow: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 520 }}>
               <thead><tr style={{ background: "#111" }}>
                 {[

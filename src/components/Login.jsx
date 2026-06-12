@@ -24,7 +24,7 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#080806", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+    <div style={{ minHeight: "100dvh", background: "#080806", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
           <img src={LOGO} alt="logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", display: "block", margin: "0 auto 1.5rem" }} />
@@ -63,7 +63,7 @@ const Login = ({ onLogin }) => {
           </button>
         </form>
         <div style={{ textAlign: "center", marginTop: "1.5rem", fontSize: ".75rem", color: "#2a2a2a" }}>
-          Novos usuários: Supabase → Authentication → Users → Add user
+          Acesso restrito · fale com o administrador
         </div>
       </div>
     </div>

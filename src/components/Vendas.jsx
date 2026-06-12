@@ -127,7 +127,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
         if (cr) setContasReceber(prev => [...prev, cr].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)));
       }
       setVendas(prev => [{ ...venda, venda_itens: itensSalvar }, ...prev]);
-      setModal(false); notify("Venda registrada!");
+      setModal(false); notify("Venda registrada.");
     } catch (err) { console.error(err); notify(err?.message || err?.details || "Erro ao salvar venda.", "error"); }
     finally { setSaving(false); }
   };
@@ -221,7 +221,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
       setVendas(prev => prev.map(v => v.id === editVenda.id ? { ...vendaAtualizada, venda_itens: novoItens } : v));
       setModalEditar(false);
       setEditVenda(null);
-      notify("Venda atualizada!");
+      notify("Venda atualizada.");
     } catch (err) {
       console.error(err);
       notify("Erro ao atualizar venda.", "error");
@@ -236,7 +236,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
       .update({ status: "pago", data_pagamento: today() })
       .eq("venda_id", v.id).eq("status", "pendente").select();
     if (cr?.length) setContasReceber(prev => prev.map(x => x.venda_id === v.id ? { ...x, status: "pago", data_pagamento: today() } : x));
-    notify("Venda marcada como paga!");
+    notify("Venda marcada como paga.");
   };
 
   const exportarCSV = () => {
@@ -391,7 +391,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
         <span style={{ color: "#ffbf00", fontFamily: "'DM Mono',monospace" }}>{fmt(totalFiltrado)}</span>
       </div>
 
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
+      <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, overflow: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 600 }}>
           <thead><tr style={{ background: "#111" }}>
             {[

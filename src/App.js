@@ -13,6 +13,7 @@ import Toast from "./components/ui/Toast";
 import Spinner from "./components/ui/Spinner";
 import { SkeletonDashboard } from "./components/ui/Skeleton";
 import Icon from "./components/ui/Icon";
+import GlobalSearch from "./components/ui/GlobalSearch";
 import { useMobile } from "./hooks/useMobile";
 
 const LOGO = "/logo.png";
@@ -25,6 +26,7 @@ const styles = `
   input,select,button{font-family:'DM Sans',sans-serif;}
   input,select{transition:border-color .15s;}
   input:focus,select:focus{border-color:#ffbf00!important;outline:none;}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #ffbf00;outline-offset:2px;}
   button:not(:disabled){transition:opacity .12s,filter .12s;}
   button:not(:disabled):hover{opacity:.82;}
   button:not(:disabled):active{opacity:.65;}
@@ -67,7 +69,7 @@ export default function App() {
 
   if (session === undefined) return (
     <><style>{styles}</style>
-      <div style={{ minHeight: "100vh", background: "#080806", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, color: "#444" }}>
+      <div style={{ minHeight: "100dvh", background: "#080806", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, color: "#444" }}>
         <Spinner size={28} /><span style={{ fontSize: ".85rem" }}>Carregando...</span>
       </div>
     </>
@@ -83,15 +85,24 @@ export default function App() {
     <>
       <style>{styles}</style>
       {toast && <Toast msg={toast.msg} type={toast.type} />}
-      <div style={{ display: "flex", minHeight: "100vh", background: "#0e0e0e" }}>
-        <aside style={{ width: sidebar ? 220 : 64, flexShrink: 0, background: "#111", borderRight: "1px solid #1a1a1a", display: isMobile ? "none" : "flex", flexDirection: "column", transition: "width .2s" }}>
-          <div style={{ padding: "1.5rem 1.25rem", borderBottom: "1px solid #1f1f1f", display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
-            <img src={LOGO} alt="logo" style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
-            <div style={{ overflow: "hidden", maxWidth: sidebar ? 200 : 0, opacity: sidebar ? 1 : 0, transition: "max-width .2s, opacity .15s", whiteSpace: "nowrap" }}>
-              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: ".95rem", color: "#c9a84c", lineHeight: 1.2 }}>Quasar Barber</div>
-              <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".08em" }}>Gestão</div>
-            </div>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100dvh", background: "#0e0e0e" }}>
+        <header style={{ height: 52, flexShrink: 0, background: "#0b0b0b", borderBottom: "1px solid #1c1c1c", display: "flex", alignItems: "center", gap: 16, padding: "0 1rem", position: "sticky", top: 0, zIndex: 200 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0, minWidth: isMobile ? "auto" : 204 }}>
+            <img src={LOGO} alt="logo" style={{ width: 26, height: 26, borderRadius: 6, objectFit: "cover" }} />
+            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: ".95rem", color: "#c9a84c", whiteSpace: "nowrap" }}>Quasar Barber</span>
+            {!isMobile && <span style={{ fontSize: ".6rem", color: "#3a3a3a", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 2 }}>Gestão</span>}
           </div>
+          {!isMobile && <GlobalSearch produtos={produtos} clientes={clientes} vendas={vendas} onGo={setAba} />}
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+            {!isMobile && <span style={{ fontSize: ".75rem", color: "#555", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session.user?.email}</span>}
+            <button onClick={handleLogout} title="Sair"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 6, border: "1px solid #222", background: "transparent", color: "#666", cursor: "pointer", fontSize: ".75rem" }}>
+              <Icon name="logout" size={14} />{!isMobile && "Sair"}
+            </button>
+          </div>
+        </header>
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <aside style={{ width: sidebar ? 220 : 64, flexShrink: 0, background: "#111", borderRight: "1px solid #1a1a1a", display: isMobile ? "none" : "flex", flexDirection: "column", transition: "width .2s" }}>
           <nav style={{ flex: 1, padding: ".75rem .5rem" }}>
             {nav.map(n => (
               <button key={n.id} onClick={() => setAba(n.id)}
@@ -113,30 +124,19 @@ export default function App() {
               </button>
             ))}
           </nav>
-          <div style={{ borderTop: "1px solid #1f1f1f", padding: ".75rem .5rem" }}>
-            <div style={{ overflow: "hidden", maxHeight: sidebar ? 48 : 0, opacity: sidebar ? 1 : 0, transition: "max-height .2s, opacity .15s", padding: "0 12px", marginBottom: sidebar ? 4 : 0 }}>
-              <div style={{ fontSize: ".65rem", color: "#444", textTransform: "uppercase", letterSpacing: ".05em" }}>Usuário</div>
-              <div style={{ fontSize: ".78rem", color: "#666", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.email}</div>
-            </div>
-            <button onClick={handleLogout}
-              style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "#555", textAlign: "left" }}>
-              <span style={{ flexShrink: 0 }}><Icon name="logout" size={17} /></span>
-              <span style={{ overflow: "hidden", maxWidth: sidebar ? 60 : 0, opacity: sidebar ? 1 : 0, transition: "max-width .2s, opacity .15s", whiteSpace: "nowrap" }}>Sair</span>
-            </button>
-          </div>
           <button onClick={() => setSidebar(p => !p)} title={sidebar ? "Recolher menu" : "Expandir menu"}
-            style={{ margin: "0 .5rem .75rem", padding: "8px 10px", borderRadius: 8, border: "1px solid #1f1f1f", background: "transparent", color: "#444", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: ".75rem" }}>
+            style={{ margin: ".75rem .5rem", padding: "8px 10px", borderRadius: 8, border: "1px solid #1f1f1f", background: "transparent", color: "#444", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: ".75rem" }}>
             <span style={{ display: "inline-flex", transform: sidebar ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
               <Icon name="chevron" size={14} />
             </span>
             <span style={{ overflow: "hidden", maxWidth: sidebar ? 80 : 0, opacity: sidebar ? 1 : 0, transition: "max-width .2s, opacity .15s", whiteSpace: "nowrap" }}>Recolher</span>
           </button>
         </aside>
-        <main style={{ flex: 1, padding: isMobile ? "1rem" : "2rem", paddingBottom: isMobile ? "80px" : "2rem", overflowY: "auto", maxHeight: "100vh" }}>
+        <main style={{ flex: 1, padding: isMobile ? "1rem" : "2rem", paddingBottom: isMobile ? "80px" : "2rem", overflowY: "auto", maxHeight: "calc(100dvh - 52px)" }}>
           {loading
             ? <SkeletonDashboard />
             : <div key={aba} className="fade-in">
-              {aba === "dashboard" && <Dashboard produtos={produtos} clientes={clientes} vendas={vendas} movimentos={movimentos} contasReceber={contasReceber} contasPagar={contasPagar} despesas={despesas} reload={load} />}
+              {aba === "dashboard" && <Dashboard produtos={produtos} clientes={clientes} vendas={vendas} movimentos={movimentos} contasReceber={contasReceber} contasPagar={contasPagar} despesas={despesas} reload={load} onNavigate={setAba} />}
               {aba === "estoque" && <Estoque produtos={produtos} setProdutos={setProdutos} setMovimentos={setMovimentos} fornecedores={fornecedores} setContasPagar={setContasPagar} pedidosCompra={pedidosCompra} setPedidosCompra={setPedidosCompra} setDespesas={setDespesas} notify={notify} />}
               {aba === "clientes" && <Clientes clientes={clientes} setClientes={setClientes} vendas={vendas} produtos={produtos} contasReceber={contasReceber} notify={notify} />}
               {aba === "vendas" && <Vendas vendas={vendas} setVendas={setVendas} clientes={clientes} produtos={produtos} setProdutos={setProdutos} setMovimentos={setMovimentos} setContasReceber={setContasReceber} notify={notify} />}
@@ -145,6 +145,7 @@ export default function App() {
             </div>
           }
         </main>
+      </div>
       </div>
       {isMobile && (
         <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #1a1a1a", display: "flex", zIndex: 100, height: 64 }}>
@@ -157,7 +158,7 @@ export default function App() {
                   <span style={{ position: "absolute", top: -3, right: -3, width: 7, height: 7, background: "#e05a5a", borderRadius: "50%", border: "1px solid #111" }} />
                 )}
               </span>
-              <span style={{ fontSize: ".67rem", textTransform: "uppercase", letterSpacing: ".03em", lineHeight: 1 }}>{n.label}</span>
+              <span style={{ fontSize: ".56rem", textTransform: "uppercase", letterSpacing: 0, lineHeight: 1, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0 2px" }}>{n.label}</span>
             </button>
           ))}
         </nav>

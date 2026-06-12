@@ -100,7 +100,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
       setContasPagar(prev => [...prev, data].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)));
       setModalNova(false);
       setForm({ fornecedorId: "", descricao: "", categoria: "outros", valor: "", forma: "a_vista", vencimento: today(), obs: "" });
-      notify("Conta a pagar lançada!");
+      notify("Conta a pagar lançada.");
     } finally { setSaving(false); }
   };
 
@@ -114,7 +114,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
       if (error) { console.error("contas_pagar update:", error); notify(`Erro ao registrar pagamento: ${error.message}`, "error"); return; }
       setContasPagar(prev => prev.map(cp => cp.id === modalPagar.id ? data : cp));
       setModalPagar(null);
-      notify("Pagamento registrado!");
+      notify("Pagamento registrado.");
     } finally { setSaving(false); }
   };
 
@@ -147,7 +147,7 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
       if (error) { notify(`Erro ao salvar: ${error.message}`, "error"); return; }
       setContasPagar(prev => prev.map(cp => cp.id === modalEditar.id ? data : cp));
       setModalEditar(null);
-      notify("Conta atualizada!");
+      notify("Conta atualizada.");
     } finally { setSaving(false); }
   };
 
@@ -167,44 +167,41 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
         <button style={btn("primary")} onClick={() => setModalNova(true)}><Icon name="plus" size={14} /> Nova Conta</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: "1.5rem" }}>
-        {[
-          { label: "A Pagar", valor: totais.pendente, cor: "#e8a020" },
-          { label: "Em Atraso", valor: totais.vencido, cor: "#e05a5a" },
-          { label: "Pago", valor: totais.pago, cor: "#4caf82" },
-        ].map((s, i) => (
-          <div key={i} style={{ background: "#161616", border: `1px solid ${s.cor}33`, borderRadius: 6, padding: "1.1rem 1.25rem" }}>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: s.cor, fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(s.valor)}</div>
-            <div style={{ fontSize: ".72rem", color: "#666", marginTop: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {totais.qtdVencido > 0 && (
-        <div style={{ background: "#1f0d0d", border: "1px solid #5a1a1a", borderRadius: 8, padding: ".75rem 1rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: 10, color: "#e05a5a" }}>
-          <Icon name="warn" size={18} />
-          <span style={{ fontSize: ".9rem" }}>
-            <b>{totais.qtdVencido} conta{totais.qtdVencido > 1 ? "s" : ""} em atraso</b>
-            {" · "}Total: <b>{fmt(totais.vencido)}</b>
-          </span>
+      <div style={{ display: "flex", flexWrap: "wrap", background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, overflow: "hidden", marginBottom: "1.25rem" }}>
+        <div style={{ flex: "1 1 160px", padding: "14px 18px", borderLeft: "1px solid #1d1d1d", marginLeft: -1 }}>
+          <div style={{ fontSize: ".62rem", color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 7 }}>A Pagar</div>
+          <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#e8a020", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(totais.pendente)}</div>
         </div>
-      )}
-
-      <div style={{ display: "flex", gap: 8, marginBottom: "1rem", flexWrap: "wrap" }}>
-        {["todos", "pendente", "vencido", "pago"].map(f => (
-          <button key={f} onClick={() => setFiltro(f)}
-            style={{ padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: ".8rem",
-              background: filtro === f
-                ? (f === "vencido" ? "#e05a5a" : f === "pago" ? "#4caf82" : f === "pendente" ? "#e8a020" : "#ffbf00")
-                : "#1a1a1a",
-              color: filtro === f ? "#0a0a08" : "#888",
-              fontWeight: filtro === f ? 700 : 400 }}>
-            {f === "todos" ? "Todos" : STATUS_LABEL[f]}
-          </button>
-        ))}
+        <div style={{ flex: "1 1 160px", padding: "14px 18px", borderLeft: "1px solid #1d1d1d", marginLeft: -1 }}>
+          <div style={{ fontSize: ".62rem", color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 7 }}>
+            Em Atraso{totais.qtdVencido > 0 ? ` · ${totais.qtdVencido} conta${totais.qtdVencido > 1 ? "s" : ""}` : ""}
+          </div>
+          <div style={{ fontSize: "1.35rem", fontWeight: 700, color: totais.vencido > 0 ? "#e05a5a" : "#3a3a3a", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(totais.vencido)}</div>
+        </div>
+        <div style={{ flex: "1 1 160px", padding: "14px 18px", borderLeft: "1px solid #1d1d1d", marginLeft: -1 }}>
+          <div style={{ fontSize: ".62rem", color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 7 }}>Pago</div>
+          <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#4caf82", fontFamily: "'DM Mono',monospace", lineHeight: 1 }}>{fmt(totais.pago)}</div>
+        </div>
       </div>
 
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: "1rem", flexWrap: "wrap" }}>
+        {["todos", "pendente", "vencido", "pago"].map(f => {
+          const cor = f === "vencido" ? "#e05a5a" : f === "pago" ? "#4caf82" : f === "pendente" ? "#e8a020" : "#c9a84c";
+          const ativo = filtro === f;
+          return (
+            <button key={f} onClick={() => setFiltro(f)}
+              style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: ".78rem",
+                border: `1px solid ${ativo ? cor + "66" : "transparent"}`,
+                background: ativo ? cor + "1a" : "#1a1a1a",
+                color: ativo ? cor : "#777",
+                fontWeight: ativo ? 600 : 400 }}>
+              {f === "todos" ? "Todos" : STATUS_LABEL[f]}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, overflow: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 580 }}>
           <thead>
             <tr style={{ background: "#111" }}>
@@ -261,9 +258,9 @@ const ContasPagar = ({ contasPagar, setContasPagar, fornecedores, notify }) => {
                             <Icon name="check" size={13} /> Pagar
                           </button>
                           <button
-                            onClick={() => abrirEditar(cp)}
-                            style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#6b9fd422", color: "#6b9fd4", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }}>
-                            <Icon name="pencil" size={13} /> Editar
+                            onClick={() => abrirEditar(cp)} title="Editar"
+                            style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: "#1f1f1f", color: "#999", fontSize: ".75rem", display: "flex", alignItems: "center", gap: 4 }}>
+                            <Icon name="pencil" size={13} />
                           </button>
                         </>
                       )}

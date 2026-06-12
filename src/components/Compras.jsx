@@ -123,7 +123,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
 
       setPedidosCompra(prev => [{ ...pedido, pedido_itens: itensData || [], forma_pagamento: form.forma_pagamento, parcelas: form.parcelas }, ...prev]);
       setModalNovo(false);
-      notify("Pedido criado!");
+      notify("Pedido criado.");
     } finally { setSaving(false); }
   };
 
@@ -154,7 +154,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
         : p
       ));
       setModalEditar(null);
-      notify("Pedido atualizado!");
+      notify("Pedido atualizado.");
     } finally { setSaving(false); }
   };
 
@@ -292,7 +292,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
       </div>
 
       {/* Tabela de pedidos */}
-      <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "auto" }}>
+      <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, overflow: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem", minWidth: 560 }}>
           <thead>
             <tr style={{ background: "#111" }}>
@@ -484,7 +484,7 @@ const Compras = ({ produtos, setProdutos, setMovimentos, fornecedores, setContas
             </div>
           )}
 
-          <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 10, overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".88rem" }}>
               <thead>
                 <tr style={{ background: "#111" }}>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Gráfico Faturamento — 3 variantes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0e0e0e; color:#e0e0e0; font-family:'DM Sans',sans-serif; padding:40px; }
+  .wrap { max-width: 1100px; margin: 0 auto; display:flex; flex-direction:column; gap:28px; }
+  .variant { background:#141414; border:1px solid #1f1f1f; border-radius:14px; padding:24px; }
+  .tag { display:inline-block; background:rgba(255,191,0,.1); color:#ffbf00; font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; padding:4px 10px; border-radius:6px; margin-bottom:6px; font-family:'DM Mono',monospace; }
+  .vtitle { font-family:'Playfair Display',serif; font-size:20px; color:#c9a84c; margin-bottom:4px; }
+  .vdesc { font-size:12.5px; color:#666; margin-bottom:18px; }
+  .num { font-family:'DM Mono',monospace; font-size:30px; font-weight:700; color:#ffbf00; }
+  .head { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:14px; }
+  .delta { display:inline-flex; align-items:center; gap:4px; background:rgba(76,175,130,.12); color:#4caf82; border-radius:6px; padding:3px 8px; font-size:11px; font-family:'DM Mono',monospace; font-weight:600; margin-left:10px; }
+  svg { width:100%; height:auto; display:block; overflow:visible; }
+  text { font-family:'DM Mono',monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="variant" id="v1">
+    <span class="tag">Variante 1</span>
+    <div class="vtitle">Copilot suave</div>
+    <div class="vdesc">Curva bezier suave · gradiente em camadas · ponto final pulsante com valor · grade quase invisível · sem linha secundária</div>
+    <div class="head"><span><span class="num">R$ 330,91</span><span class="delta">↑ 12,4%</span></span></div>
+    <svg id="s1" viewBox="0 0 800 220"></svg>
+  </div>
+
+  <div class="variant" id="v2">
+    <span class="tag">Variante 2</span>
+    <div class="vtitle">Barras + linha</div>
+    <div class="vdesc">Barras arredondadas por dia (volume) + linha suave por cima (tendência) · leitura dupla sem segunda linha pontilhada</div>
+    <div class="head"><span><span class="num">R$ 330,91</span><span class="delta">↑ 12,4%</span></span></div>
+    <svg id="s2" viewBox="0 0 800 220"></svg>
+  </div>
+
+  <div class="variant" id="v3">
+    <span class="tag">Variante 3</span>
+    <div class="vtitle">Degradê profundo</div>
+    <div class="vdesc">Área com brilho radial sob o pico · marcadores de mín/máx · baseline pontilhada · mais drama, mesma legibilidade</div>
+    <div class="head"><span><span class="num">R$ 330,91</span><span class="delta">↑ 12,4%</span></span></div>
+    <svg id="s3" viewBox="0 0 800 220"></svg>
+  </div>
+
+</div>
+
+<script>
+const dados = [
+  { label:"02", valor:38 }, { label:"04", valor:52 }, { label:"05", valor:61 },
+  { label:"07", valor:95 }, { label:"09", valor:72 }, { label:"11", valor:84 },
+];
+const W=800, H=220, padL=56, padR=70, padT=18, padB=30;
+const cw=W-padL-padR, ch=H-padT-padB;
+const maxV = Math.max(...dados.map(d=>d.valor)) * 1.12;
+const X = i => padL + (i/(dados.length-1))*cw;
+const Y = v => padT + ch - (v/maxV)*ch;
+const pts = dados.map((d,i)=>[X(i), Y(d.valor)]);
+
+function smoothPath(p){
+  let d=`M ${p[0][0]},${p[0][1]}`;
+  for(let i=0;i<p.length-1;i++){
+    const p0=p[Math.max(0,i-1)], p1=p[i], p2=p[i+1], p3=p[Math.min(p.length-1,i+2)];
+    d+=` C ${p1[0]+(p2[0]-p0[0])/6},${p1[1]+(p2[1]-p0[1])/6} ${p2[0]-(p3[0]-p1[0])/6},${p2[1]-(p3[1]-p1[1])/6} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+const line = smoothPath(pts);
+const area = `${line} L ${pts[pts.length-1][0]},${padT+ch} L ${pts[0][0]},${padT+ch} Z`;
+const fmtBR = v => "R$ " + v.toFixed(0);
+
+function gridLines(faint){
+  let s="";
+  [0,.5,1].forEach(g=>{
+    const y=padT+ch-g*ch;
+    s+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#1d1d1d" stroke-width="1" ${faint?'opacity=".6"':''}/>`;
+    if(g>0) s+=`<text x="${padL-10}" y="${y+3}" text-anchor="end" fill="#3d3d3d" font-size="9.5">${fmtBR(maxV*g)}</text>`;
+  });
+  return s;
+}
+function labels(){
+  return dados.map((d,i)=>`<text x="${X(i)}" y="${H-6}" text-anchor="middle" fill="#4a4a4a" font-size="10">${d.label}</text>`).join("");
+}
+
+/* ── V1: Copilot suave ── */
+const last = pts[pts.length-1];
+document.getElementById("s1").innerHTML = `
+<defs>
+  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ffbf00" stop-opacity=".32"/>
+    <stop offset="55%" stop-color="#ffbf00" stop-opacity=".07"/>
+    <stop offset="100%" stop-color="#ffbf00" stop-opacity="0"/>
+  </linearGradient>
+  <filter id="glow1" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</defs>
+${gridLines(true)}
+<path d="${area}" fill="url(#g1)"/>
+<path d="${line}" fill="none" stroke="#ffbf00" stroke-width="2.5" stroke-linecap="round" filter="url(#glow1)"/>
+${labels()}
+<circle cx="${last[0]}" cy="${last[1]}" r="9" fill="#ffbf00" opacity=".15">
+  <animate attributeName="r" values="6;11;6" dur="2.4s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values=".25;.05;.25" dur="2.4s" repeatCount="indefinite"/>
+</circle>
+<circle cx="${last[0]}" cy="${last[1]}" r="4" fill="#ffbf00" stroke="#141414" stroke-width="2"/>
+<g transform="translate(${last[0]+12},${last[1]-10})">
+  <rect x="0" y="-12" rx="6" width="56" height="22" fill="#1f1a06" stroke="#3a3008"/>
+  <text x="28" y="3" text-anchor="middle" fill="#ffbf00" font-size="10.5" font-weight="600">R$ 84</text>
+</g>`;
+
+/* ── V2: Barras + linha ── */
+const bw = Math.min(34, cw/dados.length*0.5);
+document.getElementById("s2").innerHTML = `
+<defs>
+  <linearGradient id="g2b" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ffbf00" stop-opacity=".55"/>
+    <stop offset="100%" stop-color="#ffbf00" stop-opacity=".06"/>
+  </linearGradient>
+  <linearGradient id="g2l" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#c9a84c"/><stop offset="100%" stop-color="#ffbf00"/>
+  </linearGradient>
+</defs>
+${gridLines(true)}
+${dados.map((d,i)=>{
+  const x=X(i)-bw/2, y=Y(d.valor), h=padT+ch-y;
+  return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="6" fill="url(#g2b)"/>`;
+}).join("")}
+<path d="${line}" fill="none" stroke="url(#g2l)" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+${pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#ffbf00" stroke="#141414" stroke-width="1.5"/>`).join("")}
+${labels()}`;
+
+/* ── V3: Degradê profundo ── */
+const peak = pts.reduce((a,p)=>p[1]<a[1]?p:a);
+const valley = pts.reduce((a,p)=>p[1]>a[1]?p:a);
+document.getElementById("s3").innerHTML = `
+<defs>
+  <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ffd24d" stop-opacity=".45"/>
+    <stop offset="40%" stop-color="#ffbf00" stop-opacity=".14"/>
+    <stop offset="100%" stop-color="#ffbf00" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="g3r" cx="50%" cy="0%" r="80%">
+    <stop offset="0%" stop-color="#ffbf00" stop-opacity=".35"/>
+    <stop offset="100%" stop-color="#ffbf00" stop-opacity="0"/>
+  </radialGradient>
+  <clipPath id="c3"><path d="${area}"/></clipPath>
+</defs>
+<path d="${area}" fill="url(#g3)"/>
+<ellipse cx="${peak[0]}" cy="${peak[1]+6}" rx="120" ry="56" fill="url(#g3r)" clip-path="url(#c3)"/>
+<line x1="${padL}" y1="${padT+ch}" x2="${W-padR}" y2="${padT+ch}" stroke="#2a2410" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="${line}" fill="none" stroke="#ffbf00" stroke-width="2.5" stroke-linecap="round"/>
+<circle cx="${peak[0]}" cy="${peak[1]}" r="4" fill="#ffd24d" stroke="#141414" stroke-width="2"/>
+<g transform="translate(${peak[0]},${peak[1]-14})">
+  <text text-anchor="middle" fill="#ffd24d" font-size="10.5" font-weight="600">máx R$ 95</text>
+</g>
+<circle cx="${valley[0]}" cy="${valley[1]}" r="3.5" fill="#6b5a17" stroke="#141414" stroke-width="2"/>
+<g transform="translate(${valley[0]},${valley[1]+20})">
+  <text text-anchor="middle" fill="#6b5a17" font-size="10">mín R$ 38</text>
+</g>
+${labels()}`;
+</script>
+</body>
+</html>
