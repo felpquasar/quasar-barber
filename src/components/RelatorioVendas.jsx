@@ -11,12 +11,23 @@ const MESES_OPT = [
 const FORMA_LABEL = { a_vista: "À Vista", cartao: "Cartão", pix: "Pix", parcelado: "Parcelado" };
 const FORMA_COR = { a_vista: "#4caf82", cartao: "#6b9fd4", pix: "#5cb8d4", parcelado: "#e8a020" };
 
+const csvCell = v => {
+  const s = String(v);
+  return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
 const exportCSV = (rows, filename) => {
-  const csv = rows.map(r => r.join(";")).join("\n");
-  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const csv = rows.map(r => r.map(csvCell).join(";")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
+};
+
+const brDate = ymd => {
+  if (!ymd) return "";
+  const [y, m, d] = ymd.slice(0, 10).split("-");
+  return `${d}/${m}/${y}`;
 };
 
 const RelatorioVendas = ({ vendas, clientes, produtos }) => {
@@ -77,10 +88,10 @@ const RelatorioVendas = ({ vendas, clientes, produtos }) => {
     const rows = [["Pedido", "Data", "Cliente", "Produto", "Qtd", "Valor (R$)"]];
     filtradas.forEach(v => {
       const cliente = clientes.find(c => c.id === v.cliente_id)?.nome ?? "—";
-      const pedido = String(v.id).padStart(3, "0");
+      const data = brDate(v.data);
       (v.venda_itens || []).forEach(it => {
         const produto = produtos.find(p => p.id === it.produto_id)?.nome ?? "Produto removido";
-        rows.push([pedido, v.data, cliente, produto, it.quantidade, Number(it.preco).toFixed(2)]);
+        rows.push([v.id, data, cliente, produto, it.quantidade, Number(it.preco).toFixed(2)]);
       });
     });
     exportCSV(rows, `Pedidos_${ano}${mes !== "00" ? "_" + mes : ""}.csv`);
