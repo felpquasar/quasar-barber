@@ -85,14 +85,27 @@ const RelatorioVendas = ({ vendas, clientes, produtos }) => {
   }, [filtradas]);
 
   const handleCSV = () => {
-    const rows = [["Pedido", "Data", "Cliente", "Produto", "Qtd", "Valor (R$)"]];
+    const rows = [["Pedido", "Data", "Cliente", "Produto", "Qtd", "Valor (R$)", "Subtotal Item (R$)", "Desconto (%)", "Total Venda (R$)", "Status", "Forma Pagamento"]];
     filtradas.forEach(v => {
       const cliente = clientes.find(c => c.id === v.cliente_id)?.nome ?? "—";
       const data = brDate(v.data);
-      (v.venda_itens || []).forEach(it => {
-        const produto = produtos.find(p => p.id === it.produto_id)?.nome ?? "Produto removido";
-        rows.push([v.id, data, cliente, produto, it.quantidade, Number(it.preco).toFixed(2)]);
-      });
+      const itensVenda = v.venda_itens || [];
+      if (itensVenda.length === 0) {
+        rows.push([v.id, data, cliente, "—", "", "", "", v.desconto_pct ?? "", Number(v.total).toFixed(2), v.status, v.forma_pagamento ?? ""]);
+      } else {
+        itensVenda.forEach((it, idx) => {
+          const produto = produtos.find(p => p.id === it.produto_id)?.nome ?? "Produto removido";
+          const subtotalItem = (Number(it.quantidade) * Number(it.preco)).toFixed(2);
+          rows.push([
+            v.id, data, cliente, produto,
+            it.quantidade, Number(it.preco).toFixed(2), subtotalItem,
+            idx === 0 ? (v.desconto_pct ?? "") : "",
+            idx === 0 ? Number(v.total).toFixed(2) : "",
+            idx === 0 ? v.status : "",
+            idx === 0 ? (v.forma_pagamento ?? "") : "",
+          ]);
+        });
+      }
     });
     exportCSV(rows, `Pedidos_${ano}${mes !== "00" ? "_" + mes : ""}.csv`);
   };
