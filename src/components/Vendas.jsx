@@ -244,30 +244,18 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
       const v = String(s ?? "");
       return v.includes(";") || v.includes('"') || v.includes("\n") ? `"${v.replace(/"/g, '""')}"` : v;
     };
-    const rows = [["Pedido", "Data", "Cliente", "Produto", "Qtd", "Preco Unit (R$)", "Subtotal Item (R$)", "Desconto (%)", "Total Venda (R$)", "Status", "Forma Pagamento"]];
+    const rows = [["Pedido", "Data", "Cliente", "Produto", "Qtd", "Valor (R$)"]];
     lista.forEach(v => {
       const cliente = clientes.find(c => c.id === v.cliente_id)?.nome ?? "—";
-      const pedido = "#" + String(v.id).slice(-4);
-      const itensVenda = v.venda_itens || [];
-      if (itensVenda.length === 0) {
-        rows.push([pedido, v.data, cliente, "—", "", "", "", v.desconto_pct ?? "", Number(v.total).toFixed(2), v.status, v.forma_pagamento ?? ""]);
-      } else {
-        itensVenda.forEach((it, idx) => {
-          const produto = produtos.find(p => p.id === it.produto_id)?.nome ?? "Produto removido";
-          const subtotalItem = (Number(it.quantidade) * Number(it.preco)).toFixed(2);
-          rows.push([
-            pedido, v.data, cliente, produto,
-            it.quantidade, Number(it.preco).toFixed(2), subtotalItem,
-            idx === 0 ? (v.desconto_pct ?? "") : "",
-            idx === 0 ? Number(v.total).toFixed(2) : "",
-            idx === 0 ? v.status : "",
-            idx === 0 ? (v.forma_pagamento ?? "") : "",
-          ]);
-        });
-      }
+      const pedido = v.id;
+      const data = v.data ? v.data.slice(0, 10).split("-").reverse().join("/") : "";
+      (v.venda_itens || []).forEach(it => {
+        const produto = produtos.find(p => p.id === it.produto_id)?.nome ?? "Produto removido";
+        rows.push([pedido, data, cliente, produto, it.quantidade, Number(it.preco).toFixed(2)]);
+      });
     });
-    const csv = rows.map(r => r.map(esc).join(";")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const csv = rows.map(r => r.map(esc).join(";")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `Vendas_${today()}.csv`; a.click();
