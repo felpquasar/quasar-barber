@@ -3,6 +3,7 @@ import { supabase } from "./lib/supabase";
 import useStore from "./hooks/useStore";
 import { today } from "./lib/utils";
 import Login from "./components/Login";
+import SetupTenant from "./components/SetupTenant";
 import Dashboard from "./components/Dashboard";
 import Estoque from "./components/Estoque";
 import Clientes from "./components/Clientes";
@@ -41,6 +42,7 @@ const styles = `
 
 export default function App() {
   const [session, setSession] = useState(undefined);
+  const [tenantId, setTenantId] = useState(undefined); // undefined=checando, null=sem loja, uuid=ok
   const [aba, setAba] = useState("dashboard");
   const [sidebar, setSidebar] = useState(true);
   const { produtos, setProdutos, clientes, setClientes, vendas, setVendas, movimentos, setMovimentos, contasReceber, setContasReceber, contasPagar, setContasPagar, fornecedores, setFornecedores, pedidosCompra, setPedidosCompra, despesas, setDespesas, loading, toast, notify, load } = useStore();
@@ -56,7 +58,17 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogout = async () => { await supabase.auth.signOut(); setSession(null); };
+  // Verifica se o usuário logado já tem uma barbearia (tenant) vinculada.
+  useEffect(() => {
+    if (!session) { setTenantId(undefined); return; }
+    let ativo = true;
+    supabase.rpc("current_tenant_id").then(({ data }) => { if (ativo) setTenantId(data ?? null); });
+    return () => { ativo = false; };
+  }, [session]);
+
+  const handleLogout = async () => { await supabase.auth.signOut(); setSession(null); setTenantId(undefined); };
+
+  const handleTenantReady = (id) => { setTenantId(id); load(); };
 
   const nav = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard" },
@@ -81,6 +93,20 @@ export default function App() {
     </>
   );
 
+  if (tenantId === undefined) return (
+    <><style>{styles}</style>
+      <div style={{ minHeight: "100dvh", background: "#080806", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, color: "#444" }}>
+        <Spinner size={28} /><span style={{ fontSize: ".85rem" }}>Carregando...</span>
+      </div>
+    </>
+  );
+
+  if (tenantId === null) return (
+    <><style>{styles.replace("background:#0e0e0e", "background:#080806")}</style>
+      <SetupTenant email={session.user?.email} onReady={handleTenantReady} onLogout={handleLogout} />
+    </>
+  );
+
   return (
     <>
       <style>{styles}</style>
@@ -89,8 +115,7 @@ export default function App() {
         <header style={{ height: 52, flexShrink: 0, background: "#0b0b0b", borderBottom: "1px solid #1c1c1c", display: "flex", alignItems: "center", gap: 16, padding: "0 1rem", position: "sticky", top: 0, zIndex: 200 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0, minWidth: isMobile ? "auto" : 204 }}>
             <img src={LOGO} alt="logo" style={{ width: 26, height: 26, borderRadius: 6, objectFit: "cover" }} />
-            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: ".95rem", color: "#c9a84c", whiteSpace: "nowrap" }}>Quasar Barber</span>
-            {!isMobile && <span style={{ fontSize: ".6rem", color: "#3a3a3a", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 2 }}>Gestão</span>}
+            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: ".95rem", color: "#c9a84c", whiteSpace: "nowrap" }}>Quasar Gestão</span>
           </div>
           {!isMobile && <GlobalSearch produtos={produtos} clientes={clientes} vendas={vendas} onGo={setAba} />}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
