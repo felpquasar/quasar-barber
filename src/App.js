@@ -4,6 +4,7 @@ import useStore from "./hooks/useStore";
 import { today } from "./lib/utils";
 import Login from "./components/Login";
 import SetupTenant from "./components/SetupTenant";
+import Onboarding from "./components/Onboarding";
 import Dashboard from "./components/Dashboard";
 import Estoque from "./components/Estoque";
 import Clientes from "./components/Clientes";
@@ -45,6 +46,7 @@ export default function App() {
   const [tenantId, setTenantId] = useState(undefined); // undefined=checando, null=sem loja, uuid=ok
   const [aba, setAba] = useState("dashboard");
   const [sidebar, setSidebar] = useState(true);
+  const [showOnb, setShowOnb] = useState(false); // wizard de onboarding (tenant novo, sem produtos)
   const { produtos, setProdutos, clientes, setClientes, vendas, setVendas, movimentos, setMovimentos, contasReceber, setContasReceber, contasPagar, setContasPagar, fornecedores, setFornecedores, pedidosCompra, setPedidosCompra, despesas, setDespesas, loading, toast, notify, load } = useStore();
 
   const isMobile = useMobile();
@@ -69,6 +71,24 @@ export default function App() {
   const handleLogout = async () => { await supabase.auth.signOut(); setSession(null); setTenantId(undefined); };
 
   const handleTenantReady = (id) => { setTenantId(id); load(); };
+
+  // Mostra o wizard de onboarding quando o tenant está pronto, dados carregados
+  // e ainda não há produtos (e não foi dispensado antes). Deps sem `produtos`
+  // de propósito: depois de importar, o wizard não some sozinho — fecha no clique.
+  useEffect(() => {
+    if (tenantId && !loading && produtos.length === 0
+      && localStorage.getItem(`quasar_onb_${tenantId}`) !== "1") {
+      setShowOnb(true);
+    }
+  }, [tenantId, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fecharOnboarding = () => {
+    if (tenantId) localStorage.setItem(`quasar_onb_${tenantId}`, "1");
+    setShowOnb(false);
+  };
+
+  const onProdutosImportados = (novos) =>
+    setProdutos(prev => [...prev, ...novos].sort((a, b) => a.nome.localeCompare(b.nome)));
 
   const nav = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard" },
@@ -104,6 +124,12 @@ export default function App() {
   if (tenantId === null) return (
     <><style>{styles.replace("background:#0e0e0e", "background:#080806")}</style>
       <SetupTenant email={session.user?.email} onReady={handleTenantReady} onLogout={handleLogout} />
+    </>
+  );
+
+  if (showOnb) return (
+    <><style>{styles}</style>
+      <Onboarding email={session.user?.email} onLogout={handleLogout} onClose={fecharOnboarding} onProdutosImportados={onProdutosImportados} />
     </>
   );
 

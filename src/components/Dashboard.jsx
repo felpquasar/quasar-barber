@@ -49,7 +49,17 @@ const CAT_CORES = ["#e05a5a", "#e8a020", "#b86fcf", "#6b9fd4", "#4caf82", "#c9a8
 
 const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, contasPagar, despesas, reload, onNavigate }) => {
   const [periodo, setPeriodo] = useState("mes");
+  const [onbCardOff, setOnbCardOff] = useState(() => localStorage.getItem("quasar_onb_card") === "1");
   const isMobile = useMobile();
+
+  const onbPassos = [
+    { ok: produtos.length > 0, label: "Cadastrar produtos", desc: "Importe o catálogo ou adicione manualmente", aba: "estoque" },
+    { ok: clientes.length > 0, label: "Cadastrar o primeiro cliente", desc: "A barbearia ou estabelecimento que compra", aba: "clientes" },
+    { ok: vendas.length > 0, label: "Registrar a primeira venda", desc: "Seu primeiro pedido no sistema", aba: "vendas" },
+  ];
+  const onbCompleto = onbPassos.every(p => p.ok);
+  const mostrarOnbCard = !onbCardOff && !onbCompleto;
+  const dispensarOnbCard = () => { localStorage.setItem("quasar_onb_card", "1"); setOnbCardOff(true); };
   const agora = new Date();
   const mesAtual = agora.toISOString().slice(0, 7);
   const semanaAtras = new Date(agora - 7 * 86400000).toISOString().split("T")[0];
@@ -202,6 +212,35 @@ const Dashboard = ({ produtos, clientes, vendas, movimentos, contasReceber, cont
 
   return (
     <div>
+      {mostrarOnbCard && (
+        <div style={{ ...card, marginBottom: 14, border: "1px solid #3a3320", background: "linear-gradient(135deg,#161410,#141414)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+            <div>
+              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.1rem", color: "#c9a84c" }}>Primeiros passos</div>
+              <div style={{ fontSize: ".78rem", color: "#777", marginTop: 3 }}>{onbPassos.filter(p => p.ok).length} de {onbPassos.length} concluídos · faça do cadastro à 1ª venda</div>
+            </div>
+            <button onClick={dispensarOnbCard} title="Ocultar" style={{ background: "none", border: "none", color: "#555", cursor: "pointer", padding: 4, display: "flex" }}>
+              <Icon name="x" size={16} />
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 10 }}>
+            {onbPassos.map((p, i) => (
+              <button key={i} onClick={() => !p.ok && onNavigate?.(p.aba)} disabled={p.ok}
+                style={{ textAlign: "left", display: "flex", gap: 10, alignItems: "flex-start", padding: "12px", borderRadius: 10, cursor: p.ok ? "default" : "pointer",
+                  background: p.ok ? "rgba(76,175,130,.06)" : "#101010", border: `1px solid ${p.ok ? "#2e5a44" : "#222"}` }}>
+                <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  background: p.ok ? "#4caf82" : "transparent", border: `1px solid ${p.ok ? "#4caf82" : "#333"}`, color: p.ok ? "#0a0a08" : "#555", fontSize: ".72rem", fontWeight: 700 }}>
+                  {p.ok ? <Icon name="check" size={14} /> : i + 1}
+                </span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: ".84rem", color: p.ok ? "#888" : "#ddd", textDecoration: p.ok ? "line-through" : "none" }}>{p.label}</span>
+                  <span style={{ display: "block", fontSize: ".7rem", color: "#555", marginTop: 2 }}>{p.ok ? "Feito" : p.desc}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: 8 }}>
         <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#c9a84c", margin: 0 }}>Dashboard</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
