@@ -124,13 +124,13 @@ const Estoque = ({ produtos, setProdutos, setMovimentos, notify, fornecedores, s
       <td style="text-align:right;font-weight:600">${fmtBRL(p.preco)}</td>
     </tr>`).join("");
     const html = `<!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="UTF-8"><title>Produtos — Quasar Barber</title>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>Produtos — Quasar Gestão</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:24px}
 h1{font-size:20px;font-weight:700;margin-bottom:4px}.sub{font-size:11px;color:#888;margin-bottom:20px}
 table{width:100%;border-collapse:collapse;margin-bottom:16px}
 th{background:#f5f5f5;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #ddd;color:#666}
 td{padding:6px 10px;border-bottom:1px solid #eee}@media print{body{padding:0}}</style></head>
-<body><h1>Produtos — Quasar Barber</h1>
+<body><h1>Produtos — Quasar Gestão</h1>
 <div class="sub">${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })} · ${lista.length} produto${lista.length !== 1 ? "s" : ""}${filtro ? ` · Busca: "${esc(filtro)}"` : ""}</div>
 <table><thead><tr><th>Produto</th><th>Categoria</th><th style="text-align:right">Estoque</th><th style="text-align:right">Custo</th><th style="text-align:right">Preço Venda</th></tr></thead>
 <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#888;padding:20px">Nenhum produto</td></tr>'}</tbody></table></body></html>`;

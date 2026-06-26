@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Quasar Gestão",
+  "name": "Quasar Gestão — Sistema de gestão para barbearias",
   "icons": [
     {
       "src": "favicon.ico",

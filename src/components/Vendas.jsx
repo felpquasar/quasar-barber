@@ -293,7 +293,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Vendas — Quasar Barber</title>
+  <title>Vendas — Quasar Gestão</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:24px}
@@ -307,7 +307,7 @@ const Vendas = ({ vendas, setVendas, clientes, produtos, setProdutos, setMovimen
   </style>
 </head>
 <body>
-  <h1>Vendas — Quasar Barber</h1>
+  <h1>Vendas — Quasar Gestão</h1>
   <div class="sub">
     ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
     · ${lista.length} registro${lista.length !== 1 ? "s" : ""}
